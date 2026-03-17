@@ -1,0 +1,213 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* MicroLeague Coin Design System - Institutional Web2-first aesthetic */
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* MicroLeague Blue - Coinbase-inspired */
+    --primary: 220 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Light blue accent */
+    --secondary: 210 100% 96%;
+    --secondary-foreground: 220 100% 40%;
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 220 100% 97%;
+    --accent-foreground: 220 100% 45%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Success green for confirmations */
+    --success: 152 76% 40%;
+    --success-foreground: 0 0% 100%;
+
+    /* Warning amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 220 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* MicroLeague specific tokens */
+    --mlc-blue: 220 100% 50%;
+    --mlc-blue-light: 220 100% 60%;
+    --mlc-blue-dark: 220 100% 40%;
+    --mlc-surface: 210 40% 98%;
+    --mlc-gradient-start: 220 100% 50%;
+    --mlc-gradient-end: 200 100% 45%;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 20% 20% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(220 20% 20% / 0.1), 0 2px 4px -2px hsl(220 20% 20% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(220 20% 20% / 0.1), 0 4px 6px -4px hsl(220 20% 20% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(220 20% 20% / 0.1), 0 8px 10px -6px hsl(220 20% 20% / 0.1);
+    --shadow-glow: 0 0 40px hsl(220 100% 50% / 0.15);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 220 100% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 40% 15%;
+    --secondary-foreground: 220 100% 70%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 220 40% 15%;
+    --accent-foreground: 220 100% 70%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 152 70% 35%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 80% 45%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 220 100% 55%;
+
+    --mlc-blue: 220 100% 55%;
+    --mlc-blue-light: 220 100% 65%;
+    --mlc-blue-dark: 220 100% 45%;
+    --mlc-surface: 222 47% 10%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .mlc-card {
+    @apply bg-card rounded-2xl border border-border shadow-[var(--shadow-md)] p-6;
+  }
+
+  .mlc-card-elevated {
+    @apply bg-card rounded-2xl border border-border shadow-[var(--shadow-lg)] p-6 hover:shadow-[var(--shadow-xl)] transition-shadow duration-300;
+  }
+
+  .mlc-gradient-bg {
+    background: linear-gradient(135deg, hsl(var(--mlc-gradient-start)) 0%, hsl(var(--mlc-gradient-end)) 100%);
+  }
+
+  .mlc-gradient-text {
+    background: linear-gradient(135deg, hsl(var(--mlc-blue)) 0%, hsl(var(--mlc-blue-light)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .mlc-section {
+    @apply py-20 px-4 md:px-8;
+  }
+
+  .mlc-container {
+    @apply max-w-7xl mx-auto;
+  }
+
+  .mlc-input {
+    @apply w-full px-4 py-3 rounded-xl border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
+  }
+
+  .mlc-btn-primary {
+    @apply px-6 py-3 rounded-xl font-semibold text-primary-foreground mlc-gradient-bg hover:opacity-90 transition-all duration-200 shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)];
+  }
+
+  .mlc-btn-secondary {
+    @apply px-6 py-3 rounded-xl font-semibold bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all duration-200 border border-border;
+  }
+
+  .mlc-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground;
+  }
+
+  .mlc-badge-primary {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px hsl(220 100% 50% / 0.2); }
+    50% { box-shadow: 0 0 40px hsl(220 100% 50% / 0.4); }
+  }
+}
