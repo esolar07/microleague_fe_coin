@@ -1,13 +1,16 @@
-const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+const rawBaseUrl =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
   "http://localhost:3001/api/v1";
 
 export const API_BASE_URL = rawBaseUrl.replace(/\/+$/, "");
 
 export async function apiFetch<T>(
   path: string,
-  init?: RequestInit & { json?: unknown; authToken?: string | null }
+  init?: RequestInit & { json?: unknown; authToken?: string | null },
 ): Promise<T> {
   const url = `${API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+  console.log(url, "url");
+
   const headers = new Headers(init?.headers);
 
   if (init?.authToken) {

@@ -1,5 +1,5 @@
 import type { Address } from "viem";
-import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
+import { readContract, simulateContract, waitForTransactionReceipt, writeContract } from "wagmi/actions";
 import { wagmiConfig } from "@/web3/wagmi";
 import { erc20Abi } from "@/contracts/erc20Abi";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
@@ -26,12 +26,16 @@ export async function buyWithToken(params: {
   paymentAmount: bigint;
   minExpectedTokens: bigint;
 }): Promise<`0x${string}`> {
-  const hash = await writeContract(wagmiConfig, {
+  // Simulate the transaction first to catch any contract errors
+  const { request } = await simulateContract(wagmiConfig, {
     abi: tokenPresaleAbi,
     address: params.presale,
     functionName: "buyWithToken",
     args: [params.paymentToken, params.paymentAmount, params.minExpectedTokens],
   });
+
+  // @ts-ignore - Wagmi v2 type inference creates complex unions for request that writeContract rejects broadly
+  const hash = await writeContract(wagmiConfig, request);
   await waitForTransactionReceipt(wagmiConfig, { hash });
   return hash;
 }

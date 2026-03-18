@@ -35,6 +35,7 @@ import {
 import { erc20Abi } from "@/contracts/erc20Abi";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 import { approveErc20, buyWithToken } from "@/services/presale";
+import { formatBlockchainError } from "@/utils/formatError";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
 
 interface PaymentModalProps {
@@ -361,9 +362,7 @@ const PaymentModal = ({
         await ensureCorrectChain();
       } catch (error) {
         // User may reject; keep manual button available
-        setCryptoError(
-          error instanceof Error ? error.message : "Failed to switch network",
-        );
+        setCryptoError(formatBlockchainError(error));
       }
     })();
   }, [
@@ -736,11 +735,7 @@ const PaymentModal = ({
                             setCryptoError(null);
                             await ensureCorrectChain();
                           } catch (error) {
-                            setCryptoError(
-                              error instanceof Error
-                                ? error.message
-                                : "Failed to switch network",
-                            );
+                            setCryptoError(formatBlockchainError(error));
                           }
                         }}
                         className="w-full mlc-btn-primary disabled:opacity-60"
@@ -830,11 +825,7 @@ const PaymentModal = ({
                               
                               setStep("crypto");
                             } catch (error) {
-                              setCryptoError(
-                                error instanceof Error
-                                  ? error.message
-                                  : "Approval failed",
-                              );
+                              setCryptoError(formatBlockchainError(error));
                               setStep("crypto");
                             } finally {
                               setIsApproving(false);
@@ -879,11 +870,7 @@ const PaymentModal = ({
                                 setTxHash(hash);
                                 setStep("success");
                               } catch (error) {
-                                setCryptoError(
-                                  error instanceof Error
-                                    ? error.message
-                                    : "Purchase failed",
-                                );
+                                setCryptoError(formatBlockchainError(error));
                                 setStep("crypto");
                               } finally {
                                 setIsBuying(false);
