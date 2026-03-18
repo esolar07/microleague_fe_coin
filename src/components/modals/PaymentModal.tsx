@@ -275,6 +275,63 @@ const PaymentModal = ({
     allowance !== undefined ? allowance < requiredUsdc : true;
   const insufficientFunds =
     usdcBalance?.value !== undefined ? usdcBalance.value < requiredUsdc : false;
+
+  const handleAutoApproveAndBuy = async () => {
+    if (!PRESALE_ADDRESS || !USDC_ADDRESS) return;
+    if (!isConnected) return;
+
+    if (insufficientFunds) {
+      setStep("topup");
+      return;
+    }
+
+    try {
+      setCryptoError(null);
+      await ensureCorrectChain();
+
+      if (expectedTokens === undefined) {
+        throw new Error("Unable to estimate token amount. Please try again.");
+      }
+
+      setStep("processing");
+
+      // 1) Approve if needed
+      if (needsApproval) {
+        setIsApproving(true);
+        const approvalHash = await approveErc20({
+          token: USDC_ADDRESS,
+          spender: PRESALE_ADDRESS,
+          amount: requiredUsdc,
+        });
+        setTxHash(approvalHash);
+
+        // Refresh allowance for UI state (best effort)
+        try {
+          await refetchAllowance();
+        } catch {
+          // ignore
+        }
+      }
+
+      // 2) Buy
+      setIsBuying(true);
+      const minExpectedTokens = (expectedTokens * 99n) / 100n;
+      const buyHash = await buyWithToken({
+        presale: PRESALE_ADDRESS,
+        paymentToken: USDC_ADDRESS,
+        paymentAmount: requiredUsdc,
+        minExpectedTokens,
+      });
+      setTxHash(buyHash);
+      setStep("success");
+    } catch (error) {
+      setCryptoError(formatBlockchainError(error));
+      setStep("crypto");
+    } finally {
+      setIsApproving(false);
+      setIsBuying(false);
+    }
+  };
   
   // Approval debugging
   console.log("=== APPROVAL DEBUG ===");
@@ -793,7 +850,7 @@ const PaymentModal = ({
                         </div>
                       )}
 
-                      {needsApproval ? (
+                      <div className="space-y-3">
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
@@ -802,100 +859,33 @@ const PaymentModal = ({
                             !USDC_ADDRESS ||
                             insufficientFunds ||
                             isApproving ||
-                            isBuying
+                            isBuying ||
+                            expectedTokens === undefined
                           }
-                          onClick={async () => {
-                            if (!PRESALE_ADDRESS || !USDC_ADDRESS) return;
-                            try {
-                              setCryptoError(null);
-                              await ensureCorrectChain();
-                              setIsApproving(true);
-                              setStep("processing");
-                              const hash = await approveErc20({
-                                token: USDC_ADDRESS,
-                                spender: PRESALE_ADDRESS,
-                                amount: requiredUsdc,
-                              });
-                              setTxHash(hash);
-                              
-                              // Refetch allowance after approval
-                              setTimeout(() => {
-                                refetchAllowance();
-                              }, 2000);
-                              
-                              setStep("crypto");
-                            } catch (error) {
-                              setCryptoError(formatBlockchainError(error));
-                              setStep("crypto");
-                            } finally {
-                              setIsApproving(false);
-                            }
-                          }}
+                          onClick={handleAutoApproveAndBuy}
                           className="w-full mlc-btn-primary disabled:opacity-60"
                         >
-                          {isApproving ? "Approving..." : "Approve USDC"}
-                        </motion.button>
-                      ) : (
-                        <div className="space-y-3">
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            disabled={
-                              !PRESALE_ADDRESS ||
-                              !USDC_ADDRESS ||
-                              insufficientFunds ||
-                              isBuying ||
-                              expectedTokens === undefined
-                            }
-                            onClick={async () => {
-                              if (
-                                !PRESALE_ADDRESS ||
-                                !USDC_ADDRESS ||
-                                expectedTokens === undefined
-                              )
-                                return;
-                              try {
-                                setCryptoError(null);
-                                await ensureCorrectChain();
-                                setIsBuying(true);
-                                setStep("processing");
-                                const minExpectedTokens =
-                                  (expectedTokens * 99n) / 100n;
-                                const hash = await buyWithToken({
-                                  presale: PRESALE_ADDRESS,
-                                  paymentToken: USDC_ADDRESS,
-                                  paymentAmount: requiredUsdc,
-                                  minExpectedTokens,
-                                });
-                                setTxHash(hash);
-                                setStep("success");
-                              } catch (error) {
-                                setCryptoError(formatBlockchainError(error));
-                                setStep("crypto");
-                              } finally {
-                                setIsBuying(false);
-                              }
-                            }}
-                            className="w-full mlc-btn-primary disabled:opacity-60"
-                          >
-                            {isBuying
+                          {isApproving
+                            ? "Approving..."
+                            : isBuying
                               ? "Confirming..."
-                              : `Buy with ${numericAmount.toFixed(2)} USDC`}
-                          </motion.button>
-                          
-                          <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => {
-                              refetchAllowance();
-                              console.log("🔄 Refreshed allowance data");
-                            }}
-                            className="w-full mlc-btn-secondary text-xs"
-                          >
-                            Refresh Approval Status
-                          </motion.button>
-                        </div>
-                      )}
+                              : needsApproval
+                                ? "Approve & Buy"
+                                : `Buy with ${numericAmount.toFixed(2)} USDC`}
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            refetchAllowance();
+                            console.log("🔄 Refreshed allowance data");
+                          }}
+                          className="w-full mlc-btn-secondary text-xs"
+                        >
+                          Refresh Approval Status
+                        </motion.button>
+                      </div>
                     </>
                   )}
 

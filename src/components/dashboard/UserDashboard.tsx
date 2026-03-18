@@ -8,7 +8,14 @@ import {
   Lock, Unlock, Timer, ArrowRight, BadgeCheck, Percent, BarChart3,
   Trophy, Star
 } from "lucide-react";
-import { useAccount, useBalance, useReadContract, useDisconnect } from "wagmi";
+import {
+  useAccount,
+  useBalance,
+  useChainId,
+  useDisconnect,
+  useReadContract,
+  useSwitchChain,
+} from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { formatUnits } from "viem";
 import logo from "@/assets/logo.webp";
@@ -21,6 +28,7 @@ import { APP_CHAIN } from "@/config/network";
 import { PRESALE_ADDRESS, USDC_ADDRESS } from "@/config/presale";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 import { useAuth } from "@/hooks/use-auth";
+import { requestSwitchChain } from "@/web3/requestSwitchChain";
 
 const tabs: { id: string; label: string; icon: React.ElementType; badge?: string }[] = [
   { id: "overview", label: "Overview", icon: TrendingUp },
@@ -33,6 +41,27 @@ const tabs: { id: string; label: string; icon: React.ElementType; badge?: string
   { id: "rewards", label: "Rewards & Referrals", icon: Gift },
   { id: "profile", label: "Profile", icon: User },
 ];
+
+type League = {
+  id: number;
+  name: string;
+  sport: string;
+  type: string;
+  creator: string;
+  members: number;
+  maxMembers: number;
+  entryFee: number;
+  prizePool: number;
+  format: string;
+  startDate: string;
+  duration: string;
+  status: string;
+  region: string;
+  description: string;
+  wins: number | null;
+  rank: number | null;
+  totalMatches?: number;
+};
 
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -47,7 +76,7 @@ const UserDashboard = () => {
   const [vestingClaimStep, setVestingClaimStep] = useState<"confirm" | "processing" | "done">("confirm");
   const [autoStakeEnabled, setAutoStakeEnabled] = useState(true);
   const [selectedClaimIndex, setSelectedClaimIndex] = useState<number | null>(null);
-  const [selectedLeague, setSelectedLeague] = useState<any>(null);
+  const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">("details");
 
@@ -57,6 +86,9 @@ const UserDashboard = () => {
   const { openConnectModal } = useConnectModal();
   const { isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const chainId = useChainId();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+  const isOnCorrectChain = !isConnected || chainId === APP_CHAIN.id;
 
   // Get USDC balance
   const { data: usdcBalance } = useBalance({
@@ -84,11 +116,34 @@ const UserDashboard = () => {
     query: { enabled: Boolean(PRESALE_ADDRESS) },
   });
 
+  const saleTokenDecimalsNum =
+    saleTokenDecimals !== undefined ? Number(saleTokenDecimals) : undefined;
+
   // Get user's total vested amount (total MLC purchased)
   const { data: userVestedAmount } = useReadContract({
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "vestedAmount",
+    args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+  });
+
+  // Get user's total allocated amount (total MLC purchased/assigned)
+  const { data: userTotalAllocated } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "totalAllocated",
+    args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+  });
+
+  // Get user's total claimed amount
+  const { data: userTotalClaimed } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "totalClaimed",
     args: address ? [address] : undefined,
     chainId: APP_CHAIN.id,
     query: { enabled: Boolean(address && PRESALE_ADDRESS) },
@@ -115,16 +170,39 @@ const UserDashboard = () => {
     query: { enabled: Boolean(address && PRESALE_ADDRESS && currentStageId !== undefined) },
   });
 
+  // Get token amount purchased for current stage (if contract tracks it)
+  const { data: userStageTokenPurchases } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "buyerPurchased",
+    args: address && currentStageId !== undefined ? [currentStageId, address] : undefined,
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(address && PRESALE_ADDRESS && currentStageId !== undefined) },
+  });
+
   // Calculate real MLC amounts
-  const totalMLC = userVestedAmount && saleTokenDecimals !== undefined 
-    ? Number(formatUnits(userVestedAmount, saleTokenDecimals))
+  const totalAllocatedMLC =
+    userTotalAllocated !== undefined && saleTokenDecimalsNum !== undefined
+      ? Number(formatUnits(userTotalAllocated, saleTokenDecimalsNum))
+      : 0;
+
+  const totalClaimedMLC =
+    userTotalClaimed !== undefined && saleTokenDecimalsNum !== undefined
+      ? Number(formatUnits(userTotalClaimed, saleTokenDecimalsNum))
+      : 0;
+
+  // "Vested" in the contract sense (released so far). Often 0 during cliff.
+  const totalVestedSoFarMLC =
+    userVestedAmount !== undefined && saleTokenDecimalsNum !== undefined
+      ? Number(formatUnits(userVestedAmount, saleTokenDecimalsNum))
+      : 0;
+
+  const claimableMLC = userClaimableAmount !== undefined && saleTokenDecimalsNum !== undefined
+    ? Number(formatUnits(userClaimableAmount, saleTokenDecimalsNum))
     : 0;
 
-  const availableTokens = userClaimableAmount && saleTokenDecimals !== undefined
-    ? Number(formatUnits(userClaimableAmount, saleTokenDecimals))
-    : 0;
-
-  const lockedTokens = totalMLC - availableTokens;
+  // Locked = allocated minus (already claimed + currently claimable)
+  const lockedTokens = Math.max(0, totalAllocatedMLC - totalClaimedMLC - claimableMLC);
 
   // Debug logging for development
   console.log("=== MLC DASHBOARD DEBUG ===");
@@ -132,20 +210,28 @@ const UserDashboard = () => {
   console.log("Address:", address);
   console.log("PRESALE_ADDRESS:", PRESALE_ADDRESS);
   console.log("Current Stage ID:", currentStageId);
-  console.log("Sale Token Decimals:", saleTokenDecimals);
+  console.log("Sale Token Decimals (raw):", saleTokenDecimals);
+  console.log("Sale Token Decimals (number):", saleTokenDecimalsNum);
+  console.log("User Total Allocated (raw):", userTotalAllocated?.toString());
+  console.log("User Total Claimed (raw):", userTotalClaimed?.toString());
   console.log("User Vested Amount (raw):", userVestedAmount?.toString());
   console.log("User Claimable Amount (raw):", userClaimableAmount?.toString());
   console.log("User Stage Purchases (raw):", userStagePurchases?.toString());
-  console.log("Calculated Total MLC:", totalMLC);
-  console.log("Calculated Available Tokens:", availableTokens);
+  console.log("User Stage Token Purchases (raw):", userStageTokenPurchases?.toString());
+  console.log("Calculated Total Allocated MLC:", totalAllocatedMLC);
+  console.log("Calculated Claimable Tokens:", claimableMLC);
+  console.log("Calculated Total Claimed MLC:", totalClaimedMLC);
+  console.log("Calculated Vested-So-Far MLC:", totalVestedSoFarMLC);
   console.log("Calculated Locked Tokens:", lockedTokens);
   console.log("USDC Balance:", usdcBalance);
 
   // Real-time stats combining contract data and mock data
   const stats = {
-    totalMLC: isConnected ? totalMLC : 0,
+    totalMLC: isConnected ? totalAllocatedMLC : 0,
     lockedTokens: isConnected ? lockedTokens : 0,
-    availableTokens: isConnected ? availableTokens : 0,
+    availableTokens: isConnected ? claimableMLC : 0,
+    totalClaimedMLC: isConnected ? totalClaimedMLC : 0,
+    vestedSoFarMLC: isConnected ? totalVestedSoFarMLC : 0,
     totalPoints: 1250, // This could come from a points contract
     referrals: 12, // This could come from a referral contract
     pendingRewards: 250, // This could come from a rewards contract
@@ -153,18 +239,18 @@ const UserDashboard = () => {
   };
 
   // Available leagues mock data
-  const availableLeagues = [
+  const availableLeagues: League[] = [
     { id: 1, name: "Street Champions League", sport: "Football", type: "Professional", creator: "Coach Mike", members: 1240, maxMembers: 1500, entryFee: 100, prizePool: 50000, format: "Round Robin", startDate: "Mar 1, 2026", duration: "Season (3 Months)", status: "Open", region: "Global", description: "The ultimate street football league. Compete against top players worldwide for massive prizes.", wins: null, rank: null },
     { id: 2, name: "Weekend Warriors Cup", sport: "Basketball", type: "Amateur", creator: "BBall Dave", members: 380, maxMembers: 512, entryFee: 50, prizePool: 15000, format: "Knockout", startDate: "Feb 20, 2026", duration: "2 Weeks", status: "Open", region: "North America", description: "Casual basketball league for weekend ballers. All skill levels welcome.", wins: null, rank: null },
     { id: 3, name: "E-Sports Arena S2", sport: "E-Sports", type: "Professional", creator: "GameMaster", members: 2048, maxMembers: 2048, entryFee: 200, prizePool: 100000, format: "Double Elimination", startDate: "Feb 15, 2026", duration: "1 Month", status: "Full", region: "Global", description: "Season 2 of the biggest e-sports league on MicroLeague.", wins: null, rank: null },
     { id: 4, name: "Community Cricket Cup", sport: "Cricket", type: "Community", creator: "CricketFan", members: 156, maxMembers: 256, entryFee: 0, prizePool: 5000, format: "Swiss", startDate: "Mar 15, 2026", duration: "1 Month", status: "Open", region: "Asia", description: "Free-to-enter community cricket tournament. Fun first, competition second!", wins: null, rank: null },
   ];
 
-  const myLeagues = [
+  const myLeagues: League[] = [
     { id: 5, name: "Premier Futsal League", sport: "Football", type: "Amateur", creator: "You", members: 64, maxMembers: 64, entryFee: 75, prizePool: 8000, format: "Round Robin", startDate: "Jan 20, 2026", duration: "Season (3 Months)", status: "Active", region: "Europe", description: "Fast-paced futsal action.", wins: 8, rank: 3, totalMatches: 12 },
   ];
 
-  const handleJoinLeague = (league: any) => {
+  const handleJoinLeague = (league: League) => {
     setSelectedLeague(league);
     setJoinStep("details");
     setShowJoinModal(true);
@@ -382,6 +468,39 @@ const UserDashboard = () => {
               className="mlc-btn-secondary text-sm px-4 py-2"
             >
               Connect Wallet
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* Network Mismatch Banner */}
+        {isConnected && !isOnCorrectChain && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-xl bg-warning/10 border border-warning/20 flex items-center gap-3"
+          >
+            <Shield className="w-5 h-5 text-warning" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-warning">Wrong Network</p>
+              <p className="text-xs text-muted-foreground">
+                Your dashboard is configured for <span className="font-medium">{APP_CHAIN.name}</span>. Switch networks to load your presale balance.
+              </p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isSwitchingChain}
+              onClick={async () => {
+                try {
+                  await requestSwitchChain(APP_CHAIN);
+                } catch {
+                  // fallback prompt via wagmi
+                  await switchChainAsync({ chainId: APP_CHAIN.id });
+                }
+              }}
+              className="mlc-btn-secondary text-sm px-4 py-2 disabled:opacity-60"
+            >
+              {isSwitchingChain ? "Switching..." : `Switch to ${APP_CHAIN.name}`}
             </motion.button>
           </motion.div>
         )}
