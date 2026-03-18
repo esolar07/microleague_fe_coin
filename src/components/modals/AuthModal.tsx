@@ -1,6 +1,13 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Mail, ArrowRight, ArrowLeft, Wallet, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useAccount, useChainId, useSignMessage, useSwitchChain } from "wagmi";
+import { type BackendWalletTypeName } from "@/lib/backend-auth";
+import { useAuth } from "@/hooks/use-auth";
+import { authenticateWallet } from "@/services/auth";
+import { APP_CHAIN } from "@/config/network";
+import { requestSwitchChain } from "@/web3/requestSwitchChain";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -10,43 +17,20 @@ interface AuthModalProps {
 
 type AuthStep = "choose" | "email" | "wallet-select" | "verify" | "otp" | "success";
 
-const walletOptions = [
-  {
-    id: "coinbase",
-    name: "Coinbase Wallet",
-    description: "Connect with Coinbase Wallet",
-    icon: "🔵",
-    popular: true,
-  },
-  {
-    id: "metamask",
-    name: "MetaMask",
-    description: "Connect with MetaMask",
-    icon: "🦊",
-    popular: true,
-  },
-  {
-    id: "walletconnect",
-    name: "WalletConnect",
-    description: "Scan with your mobile wallet",
-    icon: "🔗",
-    popular: false,
-  },
-  {
-    id: "trust",
-    name: "Trust Wallet",
-    description: "Connect with Trust Wallet",
-    icon: "🛡️",
-    popular: false,
-  },
-];
-
 const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [step, setStep] = useState<AuthStep>("choose");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLogin, setIsLogin] = useState(true);
-  const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const { login } = useAuth();
+  const { openConnectModal } = useConnectModal();
+  const { address, isConnected, connector } = useAccount();
+  const chainId = useChainId();
+  const { signMessageAsync } = useSignMessage();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+  const [autoSwitchAttempted, setAutoSwitchAttempted] = useState(false);
 
   const handleEmailSubmit = () => {
     if (email && email.includes("@")) {
@@ -78,19 +62,86 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     }
   };
 
-  const handleWalletSelect = (walletId: string) => {
-    setSelectedWallet(walletId);
-    setStep("verify");
-    setTimeout(() => {
+  const walletType = useMemo<BackendWalletTypeName>(() => {
+    const connectorName = connector?.name?.toLowerCase() ?? "";
+    const connectorId = connector?.id?.toLowerCase() ?? "";
+
+    if (connectorName.includes("coinbase") || connectorId.includes("coinbase")) {
+      return "smart";
+    }
+    if (connectorName.includes("walletconnect") || connectorId.includes("walletconnect")) {
+      return "base";
+    }
+    return "extension";
+  }, [connector?.id, connector?.name]);
+
+  const buildSignInMessage = (walletAddress: string, timestampMs: number) => {
+    const issuedAtIso = new Date(timestampMs).toISOString();
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "microleague";
+
+    return [
+      "MicroLeague wants you to sign in with your Ethereum account:",
+      walletAddress,
+      "",
+      `URI: ${origin}`,
+      "Version: 1",
+      `Chain ID: ${chainId}`,
+      `Nonce: ${timestampMs}`,
+      `Issued At: ${issuedAtIso}`,
+    ].join("\n");
+  };
+
+  const ensureCorrectChain = async () => {
+    if (!isConnected) throw new Error("Wallet not connected");
+    if (chainId === APP_CHAIN.id) return;
+    const connectorId = connector?.id?.toLowerCase() ?? "";
+    if (connectorId.includes("injected") || connectorId.includes("meta")) {
+      try {
+        await requestSwitchChain(APP_CHAIN);
+        return;
+      } catch {
+        // fall back to wagmi switch prompt
+      }
+    }
+
+    await switchChainAsync({ chainId: APP_CHAIN.id });
+  };
+
+  const handleWalletSignIn = async () => {
+    if (!address) return;
+    try {
+      setAuthError(null);
+      setStep("verify");
+
+      await ensureCorrectChain();
+
+      const timestamp = Date.now();
+      const message = buildSignInMessage(address, timestamp);
+      const signature = await signMessageAsync({ message });
+
+      const result = await authenticateWallet({
+        walletAddress: address,
+        signature,
+        message,
+        timestamp,
+        walletType,
+      });
+
+      login({ token: result.token, user: result.user });
       setStep("success");
-    }, 2000);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Sign-in failed");
+      setStep("wallet-select");
+    }
   };
 
   const handleClose = () => {
     setStep("choose");
     setEmail("");
     setOtp(["", "", "", "", "", ""]);
-    setSelectedWallet(null);
+    setAuthError(null);
+    setAutoSwitchAttempted(false);
     onClose();
   };
 
@@ -98,9 +149,34 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     setStep("choose");
     setEmail("");
     setOtp(["", "", "", "", "", ""]);
-    setSelectedWallet(null);
+    setAuthError(null);
+    setAutoSwitchAttempted(false);
     onSuccess();
   };
+
+  useEffect(() => {
+    if (!isConnected) return;
+    if (step !== "wallet-select") return;
+    if (chainId === APP_CHAIN.id) return;
+    if (autoSwitchAttempted) return;
+    if (isSwitchingChain) return;
+
+    setAutoSwitchAttempted(true);
+    (async () => {
+      try {
+        await switchChainAsync({ chainId: APP_CHAIN.id });
+      } catch (error) {
+        setAuthError(error instanceof Error ? error.message : "Failed to switch network");
+      }
+    })();
+  }, [
+    autoSwitchAttempted,
+    chainId,
+    isConnected,
+    isSwitchingChain,
+    step,
+    switchChainAsync,
+  ]);
 
   const handleBack = () => {
     if (step === "email" || step === "wallet-select") {
@@ -152,7 +228,8 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       onClick={() => setStep("email")}
-                      className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left"
+                      disabled
+                      className="w-full p-4 rounded-xl border border-border bg-secondary/30 transition-all text-left opacity-60 cursor-not-allowed"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl mlc-gradient-bg flex items-center justify-center">
@@ -161,9 +238,9 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-foreground">Continue with Email</span>
-                            <span className="mlc-badge-primary text-[10px]">Recommended</span>
+                            <span className="mlc-badge text-[10px]">Coming soon</span>
                           </div>
-                          <p className="text-sm text-muted-foreground">No wallet needed</p>
+                          <p className="text-sm text-muted-foreground">No backend support yet</p>
                         </div>
                       </div>
                     </motion.button>
@@ -224,30 +301,84 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                     </button>
                   </div>
 
-                  <div className="space-y-3">
-                    {walletOptions.map((wallet) => (
+                  {authError && (
+                    <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-foreground">
+                      {authError}
+                    </div>
+                  )}
+
+                  {!isConnected ? (
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => openConnectModal?.()}
+                      className="w-full p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+                          <Wallet className="w-5 h-5 text-foreground" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground">Connect wallet</span>
+                            <span className="mlc-badge text-[10px]">RainbowKit</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">MetaMask, Coinbase, WalletConnect</p>
+                        </div>
+                      </div>
+                    </motion.button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="p-4 rounded-xl border border-border bg-card">
+                        <p className="text-sm text-muted-foreground">Connected wallet</p>
+                        <p className="font-medium text-foreground break-all">{address}</p>
+                      </div>
+
+                      {chainId !== APP_CHAIN.id && (
+                        <div className="p-4 rounded-xl bg-warning/5 border border-warning/20">
+                          <p className="text-sm font-medium text-foreground">
+                            Switch to {APP_CHAIN.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Please switch your wallet network to continue.
+                          </p>
+                          <motion.button
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            onClick={async () => {
+                              try {
+                                setAuthError(null);
+                                await switchChainAsync({ chainId: APP_CHAIN.id });
+                              } catch (error) {
+                                setAuthError(
+                                  error instanceof Error ? error.message : "Failed to switch network"
+                                );
+                              }
+                            }}
+                            disabled={isSwitchingChain}
+                            className="mt-3 w-full mlc-btn-primary disabled:opacity-60"
+                          >
+                            {isSwitchingChain ? "Switching..." : `Switch to ${APP_CHAIN.name}`}
+                          </motion.button>
+                        </div>
+                      )}
+
                       <motion.button
-                        key={wallet.id}
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
-                        onClick={() => handleWalletSelect(wallet.id)}
-                        className="w-full p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all text-left"
+                        onClick={handleWalletSignIn}
+                        disabled={chainId !== APP_CHAIN.id}
+                        className="w-full mlc-btn-primary flex items-center justify-center gap-2"
                       >
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{wallet.icon}</span>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">{wallet.name}</span>
-                              {wallet.popular && (
-                                <span className="mlc-badge text-[10px]">Popular</span>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">{wallet.description}</p>
-                          </div>
-                        </div>
+                        Sign message to continue
+                        <ArrowRight className="w-4 h-4" />
                       </motion.button>
-                    ))}
-                  </div>
+
+                      <p className="text-xs text-muted-foreground text-center">
+                        This signs a message (no gas fees). It does not create a transaction.
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -351,12 +482,10 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 <div className="py-8 text-center">
                   <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
                   <h2 className="text-xl font-semibold text-foreground">
-                    {selectedWallet ? "Connecting Wallet" : "Creating Your Wallet"}
+                    Signing you in
                   </h2>
                   <p className="text-sm text-muted-foreground mt-2">
-                    {selectedWallet 
-                      ? "Please confirm the connection in your wallet..."
-                      : "Setting up your secure smart wallet..."}
+                    Please confirm the signature request in your wallet...
                   </p>
                 </div>
               )}

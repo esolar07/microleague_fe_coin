@@ -6,6 +6,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthProvider } from "@/hooks/use-auth";
+import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { WagmiProvider } from "wagmi";
+import { chains, wagmiConfig } from "@/web3/wagmi";
 
 const Index = lazy(() => import("./pages/Index"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -25,30 +28,34 @@ const PageLoader = () => (
 );
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="light" storageKey="mlc-ui-theme">
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/simulate" element={<SimulatePage />} />
-                <Route path="/tournament" element={<TournamentPage />} />
-                <Route path="/clubhouse" element={<ClubhousePage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/creator" element={<CreatorPage />} />
-                <Route path="/leaderboard" element={<LeaderboardPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+  <WagmiProvider config={wagmiConfig}>
+    <QueryClientProvider client={queryClient}>
+      <RainbowKitProvider chains={chains}>
+        <ThemeProvider defaultTheme="light" storageKey="mlc-ui-theme">
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/simulate" element={<SimulatePage />} />
+                    <Route path="/tournament" element={<TournamentPage />} />
+                    <Route path="/clubhouse" element={<ClubhousePage />} />
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/creator" element={<CreatorPage />} />
+                    <Route path="/leaderboard" element={<LeaderboardPage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </BrowserRouter>
+            </TooltipProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </RainbowKitProvider>
+    </QueryClientProvider>
+  </WagmiProvider>
 );
 
 export default App;

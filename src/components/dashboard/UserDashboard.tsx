@@ -1,17 +1,26 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Coins, Gift, Users, Gamepad2, TrendingUp, ExternalLink, 
-  Copy, CheckCircle, User, Wallet, Shield, Clock, ArrowUpRight,
-  Calendar, Award, Settings, ChevronRight, X, Sparkles, Zap,
+  Copy, CheckCircle, User, Wallet, Shield, Clock,
+  Calendar, Award, ChevronRight, X, Sparkles, Zap,
   Lock, Unlock, Timer, ArrowRight, BadgeCheck, Percent, BarChart3,
   Trophy, Star
 } from "lucide-react";
+import { useAccount, useBalance, useReadContract, useDisconnect } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { formatUnits } from "viem";
 import logo from "@/assets/logo.webp";
 import QuestsSection from "./QuestsSection";
 import PredictionPolls from "./PredictionPolls";
 import ClaimRequestsHistory from "./ClaimRequestsHistory";
+import PaymentModal from "@/components/modals/PaymentModal";
+import PresaleWidget from "@/components/presale/PresaleWidget";
+import { APP_CHAIN } from "@/config/network";
+import { PRESALE_ADDRESS, USDC_ADDRESS } from "@/config/presale";
+import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
+import { useAuth } from "@/hooks/use-auth";
 
 const tabs: { id: string; label: string; icon: React.ElementType; badge?: string }[] = [
   { id: "overview", label: "Overview", icon: TrendingUp },
@@ -30,6 +39,8 @@ const UserDashboard = () => {
   const [copied, setCopied] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
+  const [showPresaleWidget, setShowPresaleWidget] = useState(false);
+  const [purchaseAmount, setPurchaseAmount] = useState(100);
   const [isClaiming, setIsClaiming] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(false);
   const [showVestingClaimModal, setShowVestingClaimModal] = useState(false);
@@ -39,6 +50,107 @@ const UserDashboard = () => {
   const [selectedLeague, setSelectedLeague] = useState<any>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">("details");
+
+  // Wallet connection and auth
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+  const { openConnectModal } = useConnectModal();
+  const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // Get USDC balance
+  const { data: usdcBalance } = useBalance({
+    address,
+    token: USDC_ADDRESS,
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(address && USDC_ADDRESS) },
+  });
+
+  // Get current presale stage
+  const { data: currentStage } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "currentStage",
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(PRESALE_ADDRESS) },
+  });
+
+  // Get sale token decimals
+  const { data: saleTokenDecimals } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "saleTokenDecimals",
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(PRESALE_ADDRESS) },
+  });
+
+  // Get user's total vested amount (total MLC purchased)
+  const { data: userVestedAmount } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "vestedAmount",
+    args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+  });
+
+  // Get user's claimable amount (available MLC)
+  const { data: userClaimableAmount } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "claimableAmount",
+    args: address ? [address] : undefined,
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+  });
+
+  // Get user's purchases for current stage
+  const currentStageId = currentStage?.[0];
+  const { data: userStagePurchases } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "buyerPurchasedForStage",
+    args: address && currentStageId !== undefined ? [currentStageId, address] : undefined,
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(address && PRESALE_ADDRESS && currentStageId !== undefined) },
+  });
+
+  // Calculate real MLC amounts
+  const totalMLC = userVestedAmount && saleTokenDecimals !== undefined 
+    ? Number(formatUnits(userVestedAmount, saleTokenDecimals))
+    : 0;
+
+  const availableTokens = userClaimableAmount && saleTokenDecimals !== undefined
+    ? Number(formatUnits(userClaimableAmount, saleTokenDecimals))
+    : 0;
+
+  const lockedTokens = totalMLC - availableTokens;
+
+  // Debug logging for development
+  console.log("=== MLC DASHBOARD DEBUG ===");
+  console.log("Connected:", isConnected);
+  console.log("Address:", address);
+  console.log("PRESALE_ADDRESS:", PRESALE_ADDRESS);
+  console.log("Current Stage ID:", currentStageId);
+  console.log("Sale Token Decimals:", saleTokenDecimals);
+  console.log("User Vested Amount (raw):", userVestedAmount?.toString());
+  console.log("User Claimable Amount (raw):", userClaimableAmount?.toString());
+  console.log("User Stage Purchases (raw):", userStagePurchases?.toString());
+  console.log("Calculated Total MLC:", totalMLC);
+  console.log("Calculated Available Tokens:", availableTokens);
+  console.log("Calculated Locked Tokens:", lockedTokens);
+  console.log("USDC Balance:", usdcBalance);
+
+  // Real-time stats combining contract data and mock data
+  const stats = {
+    totalMLC: isConnected ? totalMLC : 0,
+    lockedTokens: isConnected ? lockedTokens : 0,
+    availableTokens: isConnected ? availableTokens : 0,
+    totalPoints: 1250, // This could come from a points contract
+    referrals: 12, // This could come from a referral contract
+    pendingRewards: 250, // This could come from a rewards contract
+    usdcBalance: usdcBalance ? Number(usdcBalance.value) / Math.pow(10, usdcBalance.decimals) : 0,
+  };
 
   // Available leagues mock data
   const availableLeagues = [
@@ -60,6 +172,43 @@ const UserDashboard = () => {
 
   const processJoin = () => {
     setJoinStep("joined");
+  };
+
+  const handleBuyMoreMLC = (amount: number = 100) => {
+    console.log("🛒 Buy More MLC triggered with amount:", amount);
+    setPurchaseAmount(amount);
+    setShowPresaleWidget(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowBuyModal(false);
+    setShowPresaleWidget(false);
+    // Could add success notification here
+  };
+
+  const handleWidgetBuy = (amount: number) => {
+    console.log("💰 Purchase amount from widget:", amount);
+    setPurchaseAmount(amount);
+    setShowPresaleWidget(false);
+    setShowBuyModal(true);
+  };
+
+  const handleLogoutAndDisconnect = () => {
+    if (isConnected || isAuthenticated) {
+      // Logout user authentication
+      if (isAuthenticated) {
+        logout();
+      }
+      // Disconnect wallet
+      if (isConnected) {
+        disconnect();
+      }
+      // Redirect to home page
+      navigate("/");
+    } else {
+      // Open connect modal if not connected
+      openConnectModal?.();
+    }
   };
 
   const referralCode = "ABC123XY";
@@ -85,16 +234,6 @@ const UserDashboard = () => {
     }, 2000);
   };
 
-  // Mock data
-  const stats = {
-    totalMLC: 4000,
-    lockedTokens: 4000,
-    availableTokens: 0,
-    totalPoints: 1250,
-    referrals: 12,
-    pendingRewards: 250,
-  };
-
   const referralHistory = [
     { user: "alice@***", action: "Signed up", reward: "+50 Points", date: "2 hours ago" },
     { user: "bob@***", action: "Purchased 1,000 MLC", reward: "+50 MLC", date: "Yesterday" },
@@ -111,11 +250,11 @@ const UserDashboard = () => {
     { action: "Referral purchase bonus", amount: "+50 MLC", time: "3 days ago", type: "referral" },
   ];
 
-  // Vesting data
+  // Vesting data - using real stats where available
   const vestingData = {
-    totalVested: 4000,
+    totalVested: stats.totalMLC,
     totalClaimed: 0,
-    totalRemaining: 4000,
+    totalRemaining: stats.lockedTokens,
     currentRate: 0.01,
     projectedRate: 0.025,
     rateChange: "+150%",
@@ -165,14 +304,31 @@ const UserDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => setShowBuyModal(true)}
+                onClick={() => handleBuyMoreMLC(100)}
                 className="mlc-btn-primary text-sm px-4 py-2"
               >
                 Buy More MLC
               </motion.button>
-              <button className="mlc-btn-secondary text-sm px-4 py-2">
-                Disconnect
-              </button>
+              
+              {/* Wallet Status Indicator */}
+              {isConnected && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/20">
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+                  <span className="text-xs text-success font-medium">
+                    {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connected"}
+                  </span>
+                </div>
+              )}
+              
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleLogoutAndDisconnect}
+                className="mlc-btn-secondary text-sm px-4 py-2 flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                {isConnected || isAuthenticated ? "Logout & Disconnect" : "Connect Wallet"}
+              </motion.button>
             </div>
           </div>
         </div>
@@ -207,6 +363,29 @@ const UserDashboard = () => {
 
       {/* Content */}
       <div className="mlc-container py-8">
+        {/* Connection Status Banner */}
+        {!isConnected && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-xl bg-warning/10 border border-warning/20 flex items-center gap-3"
+          >
+            <Wallet className="w-5 h-5 text-warning" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-warning">Wallet Not Connected</p>
+              <p className="text-xs text-muted-foreground">Connect your wallet to view your MLC balance and transaction history</p>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => openConnectModal?.()}
+              className="mlc-btn-secondary text-sm px-4 py-2"
+            >
+              Connect Wallet
+            </motion.button>
+          </motion.div>
+        )}
+
         {/* Overview Tab */}
         {activeTab === "overview" && (
           <motion.div
@@ -221,24 +400,48 @@ const UserDashboard = () => {
                   <span className="text-sm text-muted-foreground">Total MLC</span>
                   <Coins className="w-4 h-4 text-primary" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{stats.totalMLC.toLocaleString()}</p>
-                <p className="text-xs text-success mt-1">+5.2% value</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {!isConnected ? "—" : 
+                   userVestedAmount === undefined ? "Loading..." : 
+                   stats.totalMLC.toLocaleString()}
+                </p>
+                <p className="text-xs text-success mt-1">
+                  {!isConnected ? "Connect wallet" : 
+                   userVestedAmount === undefined ? "Fetching data..." :
+                   "+5.2% value"}
+                </p>
               </div>
               <div className="mlc-card-elevated">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Locked Tokens</span>
                   <Shield className="w-4 h-4 text-warning" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{stats.lockedTokens.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground mt-1">Presale</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {!isConnected ? "—" : 
+                   userVestedAmount === undefined ? "Loading..." : 
+                   stats.lockedTokens.toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {!isConnected ? "Connect wallet" : 
+                   userVestedAmount === undefined ? "Fetching data..." :
+                   "Presale"}
+                </p>
               </div>
               <div className="mlc-card-elevated">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Total Points</span>
-                  <Award className="w-4 h-4 text-success" />
+                  <span className="text-sm text-muted-foreground">USDC Balance</span>
+                  <Wallet className="w-4 h-4 text-success" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{stats.totalPoints.toLocaleString()}</p>
-                <p className="text-xs text-success mt-1">+125 today</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {!isConnected ? "—" : 
+                   usdcBalance === undefined ? "Loading..." :
+                   `${stats.usdcBalance.toFixed(2)}`}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {!isConnected ? "Connect wallet" : 
+                   usdcBalance === undefined ? "Fetching data..." :
+                   "Available"}
+                </p>
               </div>
               <div className="mlc-card-elevated">
                 <div className="flex items-center justify-between mb-2">
@@ -387,6 +590,29 @@ const UserDashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
+            {/* Connection Status for Tokens Tab */}
+            {!isConnected && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-6 rounded-xl bg-primary/5 border border-primary/20 text-center"
+              >
+                <Wallet className="w-12 h-12 text-primary mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Connect Your Wallet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Connect your wallet to view your MLC token balance and transaction history
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => openConnectModal?.()}
+                  className="mlc-btn-primary"
+                >
+                  Connect Wallet
+                </motion.button>
+              </motion.div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-6">
               {/* Token Balance Card */}
               <div className="mlc-card-elevated">
@@ -396,8 +622,12 @@ const UserDashboard = () => {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Balance</p>
-                    <p className="text-3xl font-bold text-foreground">{stats.totalMLC.toLocaleString()} MLC</p>
-                    <p className="text-sm text-success">≈ $40.00 USD</p>
+                    <p className="text-3xl font-bold text-foreground">
+                      {isConnected ? `${stats.totalMLC.toLocaleString()} MLC` : "— MLC"}
+                    </p>
+                    <p className="text-sm text-success">
+                      {isConnected ? `≈ ${(stats.totalMLC * 0.01).toFixed(2)} USD` : "Connect wallet"}
+                    </p>
                   </div>
                 </div>
 
@@ -407,14 +637,27 @@ const UserDashboard = () => {
                       <Shield className="w-4 h-4 text-warning" />
                       <span className="text-muted-foreground">Locked (Presale)</span>
                     </div>
-                    <span className="font-semibold text-foreground">{stats.lockedTokens.toLocaleString()} MLC</span>
+                    <span className="font-semibold text-foreground">
+                      {isConnected ? `${stats.lockedTokens.toLocaleString()} MLC` : "—"}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-3 border-b border-border">
                     <div className="flex items-center gap-2">
                       <Coins className="w-4 h-4 text-success" />
                       <span className="text-muted-foreground">Available</span>
                     </div>
-                    <span className="font-semibold text-foreground">{stats.availableTokens.toLocaleString()} MLC</span>
+                    <span className="font-semibold text-foreground">
+                      {isConnected ? `${stats.availableTokens.toLocaleString()} MLC` : "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-3 border-b border-border">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-4 h-4 text-primary" />
+                      <span className="text-muted-foreground">USDC Balance</span>
+                    </div>
+                    <span className="font-semibold text-foreground">
+                      {isConnected ? `${stats.usdcBalance.toFixed(2)} USDC` : "—"}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-3">
                     <div className="flex items-center gap-2">
@@ -432,15 +675,34 @@ const UserDashboard = () => {
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl bg-secondary/50">
                     <p className="text-sm text-muted-foreground mb-1">Current Price</p>
-                    <p className="text-2xl font-bold text-foreground">$0.01 <span className="text-sm text-muted-foreground">per MLC</span></p>
+                    <p className="text-2xl font-bold text-foreground">$0.001 <span className="text-sm text-muted-foreground">per MLC</span></p>
                   </div>
                   <div className="p-4 rounded-xl bg-success/10 border border-success/20">
                     <p className="text-sm text-muted-foreground mb-1">Phase 2 Price</p>
-                    <p className="text-2xl font-bold text-success">$0.015 <span className="text-sm text-success/70">+50%</span></p>
+                    <p className="text-2xl font-bold text-success">$0.0015 <span className="text-sm text-success/70">+50%</span></p>
                   </div>
                   <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
                     <p className="text-sm text-muted-foreground mb-1">Expected Launch</p>
                     <p className="text-2xl font-bold text-primary">TBD</p>
+                  </div>
+                  
+                  {/* Quick Buy Buttons */}
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-sm font-medium text-foreground mb-3">Quick Buy</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[50, 100, 250, 500].map((amount) => (
+                        <motion.button
+                          key={amount}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleBuyMoreMLC(amount)}
+                          className="p-3 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors text-center"
+                        >
+                          <p className="text-sm font-bold text-primary">${amount}</p>
+                          <p className="text-xs text-muted-foreground">{(amount / 0.001).toLocaleString()} MLC</p>
+                        </motion.button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1386,105 +1648,14 @@ const UserDashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* Buy More MLC Modal */}
-      <AnimatePresence>
-        {showBuyModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowBuyModal(false)}
-              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
-            />
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            >
-              <div className="mlc-card-elevated w-full max-w-md">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl mlc-gradient-bg flex items-center justify-center">
-                      <Coins className="w-6 h-6 text-primary-foreground" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-semibold text-foreground">Buy More MLC</h2>
-                      <p className="text-sm text-muted-foreground">Phase 1 pricing active</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setShowBuyModal(false)}
-                    className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
-                  >
-                    <X className="w-5 h-5 text-muted-foreground" />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-primary/20">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Current Price</span>
-                      <span className="text-2xl font-bold text-primary">$0.01</span>
-                    </div>
-                    <p className="text-xs text-success mt-1">🟢 Phase 1 — Best price available!</p>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-foreground">Amount (USD)</label>
-                    <input 
-                      type="number" 
-                      placeholder="100" 
-                      defaultValue={100}
-                      className="mlc-input mt-1" 
-                    />
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-secondary/50">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">You'll receive</span>
-                      <span className="text-lg font-bold text-foreground">~10,000 MLC</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-sm text-muted-foreground">Phase 1 Bonus</span>
-                      <span className="text-sm font-medium text-success">+1,000 MLC (10%)</span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
-                    <p className="text-xs text-warning flex items-start gap-2">
-                      <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      Phase 1 ends January 15, 2026. After that, price increases to $0.015.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowBuyModal(false)}
-                    className="flex-1 mlc-btn-secondary"
-                  >
-                    Cancel
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="flex-1 mlc-btn-primary flex items-center justify-center gap-2"
-                  >
-                    <Coins className="w-4 h-4" />
-                    Buy Now
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* PaymentModal for Buy More MLC */}
+      <PaymentModal
+        isOpen={showBuyModal}
+        onClose={() => setShowBuyModal(false)}
+        onSuccess={handlePaymentSuccess}
+        amount={purchaseAmount}
+        mlcAmount={purchaseAmount / 0.001}
+      />
       {/* Join League Modal */}
       <AnimatePresence>
         {showJoinModal && selectedLeague && (
@@ -1697,6 +1868,46 @@ const UserDashboard = () => {
           </>
         )}
       </AnimatePresence>
+
+      {/* Floating Presale Widget */}
+      <AnimatePresence>
+        {showPresaleWidget && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPresaleWidget(false)}
+              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 100, x: "-50%" }}
+              animate={{ opacity: 1, y: 0, x: "-50%" }}
+              exit={{ opacity: 0, y: 100, x: "-50%" }}
+              className="fixed bottom-4 left-1/2 z-50"
+            >
+              <div className="relative">
+                <button
+                  onClick={() => setShowPresaleWidget(false)}
+                  className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors z-10"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <PresaleWidget onBuyClick={handleWidgetBuy} />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* PaymentModal for Buy More MLC */}
+      <PaymentModal
+        isOpen={showBuyModal}
+        onClose={() => setShowBuyModal(false)}
+        onSuccess={handlePaymentSuccess}
+        amount={purchaseAmount}
+        mlcAmount={purchaseAmount / 0.001}
+      />
     </div>
   );
 };

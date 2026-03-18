@@ -18,6 +18,7 @@ import AuthModal from "@/components/modals/AuthModal";
 import ReferralModal from "@/components/modals/ReferralModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 const PresalePage = () => {
   const [showPresaleWidget, setShowPresaleWidget] = useState(false);
@@ -26,13 +27,15 @@ const PresalePage = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(100);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   const handleBuyClick = () => {
     setShowPresaleWidget(true);
   };
 
-  const handleWidgetBuy = () => {
+  const handleWidgetBuy = (amount: number) => {
+    console.log("💰 Purchase amount from widget:", amount);
+    setPurchaseAmount(amount);
     if (!isAuthenticated) {
       setShowAuthModal(true);
     } else {
@@ -41,7 +44,6 @@ const PresalePage = () => {
   };
 
   const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
     setShowAuthModal(false);
     setShowPaymentModal(true);
   };
@@ -53,7 +55,6 @@ const PresalePage = () => {
 
   const handleWalletSelect = (method: string) => {
     setShowWalletModal(false);
-    setIsAuthenticated(true);
     setShowPaymentModal(true);
   };
 
@@ -123,7 +124,7 @@ const PresalePage = () => {
         onClose={() => setShowPaymentModal(false)}
         onSuccess={handlePaymentSuccess}
         amount={purchaseAmount}
-        mlcAmount={purchaseAmount / 0.025}
+        mlcAmount={purchaseAmount / 0.001}
       />
       <AuthModal
         isOpen={showAuthModal}

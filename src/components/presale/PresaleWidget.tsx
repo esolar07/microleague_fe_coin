@@ -1,16 +1,44 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Info, Zap } from "lucide-react";
+import { useReadContract } from "wagmi";
+import { formatUnits } from "viem";
+import { PRESALE_ADDRESS } from "@/config/presale";
+import { APP_CHAIN } from "@/config/network";
+import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 
 interface PresaleWidgetProps {
-  onBuyClick: () => void;
+  onBuyClick: (amount: number) => void;
   mlcPrice?: number;
 }
 
 const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
   const [usdAmount, setUsdAmount] = useState<string>("100");
 
-  const mlcAmount = usdAmount ? (parseFloat(usdAmount) / mlcPrice).toFixed(0) : "0";
+  const { data: currentStage } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "currentStage",
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(PRESALE_ADDRESS) },
+  });
+
+  const { data: saleTokenDecimals } = useReadContract({
+    abi: tokenPresaleAbi,
+    address: PRESALE_ADDRESS,
+    functionName: "saleTokenDecimals",
+    chainId: APP_CHAIN.id,
+    query: { enabled: Boolean(PRESALE_ADDRESS) },
+  });
+
+  const stage = currentStage?.[1];
+  const stagePriceUsd =
+    stage?.price !== undefined ? Number(formatUnits(stage.price, 18)) : undefined;
+  const effectivePrice = stagePriceUsd ?? mlcPrice;
+
+  const mlcAmount = usdAmount
+    ? (parseFloat(usdAmount) / effectivePrice).toFixed(0)
+    : "0";
 
   const handleAmountChange = (value: string) => {
     const numericValue = value.replace(/[^0-9.]/g, "");
@@ -20,9 +48,18 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
   const quickAmounts = [100, 500, 1000, 5000];
 
   // Presale stats
-  const soldAmount = 2200;
-  const totalCap = 200000000;
+  const soldAmount =
+    stage?.soldAmount !== undefined && saleTokenDecimals !== undefined
+      ? Number(formatUnits(stage.soldAmount, saleTokenDecimals))
+      : 2200;
+  const totalCap =
+    stage?.offeredAmount !== undefined && saleTokenDecimals !== undefined
+      ? Number(formatUnits(stage.offeredAmount, saleTokenDecimals))
+      : 200000000;
   const progressPercent = (soldAmount / totalCap) * 100;
+
+  const stageEnd =
+    stage?.endTime !== undefined ? new Date(Number(stage.endTime) * 1000) : null;
 
   return (
     <motion.div
@@ -48,7 +85,7 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Current Price</span>
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-foreground">${mlcPrice}</span>
+            <span className="text-xl font-bold text-foreground">${effectivePrice}</span>
             <span className="text-sm text-muted-foreground">USDC per MLC</span>
           </div>
         </div>
@@ -129,7 +166,7 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
       <motion.button
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        onClick={onBuyClick}
+        onClick={() => onBuyClick(parseFloat(usdAmount) || 0)}
         className="w-full mlc-btn-primary flex items-center justify-center gap-2 text-lg py-4"
       >
         Buy MLC
@@ -138,7 +175,10 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
 
       {/* Phase End Notice */}
       <p className="text-center text-sm text-muted-foreground mt-4">
-        Presale - Phase 1 Ends <span className="font-medium text-foreground">January 15, 2026</span>
+        Presale - Phase 1 Ends{" "}
+        <span className="font-medium text-foreground">
+          {stageEnd ? stageEnd.toLocaleDateString() : "TBA"}
+        </span>
       </p>
 
       {/* Info Notice */}
