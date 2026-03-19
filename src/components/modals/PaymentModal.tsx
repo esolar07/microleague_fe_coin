@@ -386,7 +386,7 @@ const PaymentModal = ({
     setEmailSent(false);
     onClose();
   };
-
+  //
   const handleSuccessClose = () => {
     setStep("select");
     setReceiptUploaded(false);
