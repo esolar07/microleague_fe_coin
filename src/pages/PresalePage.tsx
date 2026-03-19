@@ -19,6 +19,7 @@ import ReferralModal from "@/components/modals/ReferralModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useNavigate } from "react-router-dom";
 
 const PresalePage = () => {
   const [showPresaleWidget, setShowPresaleWidget] = useState(false);
@@ -28,6 +29,7 @@ const PresalePage = () => {
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(100);
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const handleBuyClick = () => {
     setShowPresaleWidget(true);
@@ -50,7 +52,8 @@ const PresalePage = () => {
 
   const handlePaymentSuccess = () => {
     setShowPaymentModal(false);
-    setShowReferralModal(true);
+    // setShowReferralModal(true);
+    navigate("/dashboard");
   };
 
   const handleWalletSelect = (method: string) => {
@@ -61,7 +64,7 @@ const PresalePage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       {/* Main Content */}
       <main className="pt-16">
         <HeroSection onBuyClick={handleBuyClick} />

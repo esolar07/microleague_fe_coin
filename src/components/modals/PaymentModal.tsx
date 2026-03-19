@@ -48,7 +48,6 @@ interface PaymentModalProps {
 
 type PaymentStep =
   | "select"
-  | "card"
   | "crypto"
   | "topup"
   | "bank"
@@ -96,7 +95,7 @@ const PaymentModal = ({
       try {
         const ethereum = (window as any).ethereum;
         if (ethereum) {
-          const hexChainId = await ethereum.request({ method: 'eth_chainId' });
+          const hexChainId = await ethereum.request({ method: "eth_chainId" });
           const actualId = parseInt(hexChainId, 16);
           setActualChainId(actualId);
         }
@@ -108,7 +107,7 @@ const PaymentModal = ({
 
     if (isConnected) {
       getActualChainId();
-      
+
       // Listen for chain changes
       const ethereum = (window as any).ethereum;
       if (ethereum) {
@@ -117,9 +116,10 @@ const PaymentModal = ({
           setActualChainId(newChainId);
           console.log("Chain changed to:", newChainId);
         };
-        
-        ethereum.on('chainChanged', handleChainChanged);
-        return () => ethereum.removeListener('chainChanged', handleChainChanged);
+
+        ethereum.on("chainChanged", handleChainChanged);
+        return () =>
+          ethereum.removeListener("chainChanged", handleChainChanged);
       }
     }
   }, [isConnected, chainId]);
@@ -137,9 +137,13 @@ const PaymentModal = ({
   });
 
   // Ensure amount is a valid number
-  const numericAmount = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
-  
-  const requiredUsdc = parseUnits(numericAmount.toFixed(2), actualUsdcDecimals || PAYMENT_TOKEN_DECIMALS);
+  const numericAmount =
+    typeof amount === "number" ? amount : parseFloat(amount) || 0;
+
+  const requiredUsdc = parseUnits(
+    numericAmount.toFixed(2),
+    actualUsdcDecimals || PAYMENT_TOKEN_DECIMALS,
+  );
 
   const { data: usdcBalance } = useBalance({
     address,
@@ -168,16 +172,6 @@ const PaymentModal = ({
   const stageId = currentStage?.[0];
   const stageData = currentStage?.[1];
 
-  // Get current stage details for debugging - not needed since currentStage returns the data
-  // const { data: stageDetails } = useReadContract({
-  //   abi: tokenPresaleAbi,
-  //   address: PRESALE_ADDRESS,
-  //   functionName: "getStage",
-  //   args: stageId !== undefined ? [stageId] : undefined,
-  //   chainId: APP_CHAIN.id,
-  //   query: { enabled: Boolean(PRESALE_ADDRESS && stageId !== undefined) },
-  // });
-
   const { data: calc } = useReadContract({
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
@@ -203,73 +197,22 @@ const PaymentModal = ({
   });
 
   const expectedTokens = calc?.[0];
-  
+
   const purchasedMlc =
     expectedTokens !== undefined && saleTokenDecimals !== undefined
       ? Number(formatUnits(expectedTokens, saleTokenDecimals))
       : mlcAmount;
-      
+
   // Contract calculation is correct - use it directly
   let displayMlc = purchasedMlc;
-  let isCalculationFixed = false;
-  
+  const isCalculationFixed = false;
+
   // Only show debug info, don't override the contract calculation
   if (stageData?.price && actualUsdcDecimals !== undefined) {
-    const usdAmountWei = parseUnits(numericAmount.toString(), actualUsdcDecimals);
-    const stagePrice = stageData.price;
-    const stagePriceUsd = Number(formatUnits(stagePrice, 18));
-    
-    console.log("🧮 Price verification:");
-    console.log("USD Amount:", numericAmount, "USDC");
-    console.log("Stage Price (USD):", stagePriceUsd);
-    console.log("Expected MLC from price:", numericAmount / stagePriceUsd);
-    console.log("Contract returned MLC:", purchasedMlc);
-    console.log("Passed mlcAmount param:", mlcAmount);
-    
     // Contract calculation should be correct now
     displayMlc = purchasedMlc;
   }
-  
-  // Debug logging for MLC calculation troubleshooting
-  console.log("=== MLC CALCULATION DEBUG ===");
-  console.log("💰 Amount received by PaymentModal:", numericAmount);
-  console.log("🪙 Expected MLC from parent:", mlcAmount);
-  console.log("USDC Address:", USDC_ADDRESS);
-  console.log("Actual USDC decimals from contract:", actualUsdcDecimals);
-  console.log("Frontend PAYMENT_TOKEN_DECIMALS:", PAYMENT_TOKEN_DECIMALS);
-  console.log("Decimals match:", actualUsdcDecimals === PAYMENT_TOKEN_DECIMALS);
-  console.log("Required USDC (wei):", requiredUsdc.toString());
-  console.log("Current stage ID:", stageId);
-  console.log("Stage data:", stageData);
-  console.log("Stage price (wei):", stageData?.price?.toString());
-  console.log("Sale token decimals:", saleTokenDecimals);
-  console.log("Expected tokens (wei):", expectedTokens?.toString());
-  console.log("Contract calc result:", calc);
-  console.log("USD value from calc (wei):", calc?.[1]?.toString());
-  console.log("Raw calculated MLC:", purchasedMlc);
-  console.log("Expected MLC:", mlcAmount);
-  console.log("Expected range:", `${(mlcAmount * 0.95).toFixed(2)} - ${(mlcAmount * 1.05).toFixed(2)}`);
-  console.log("Threshold for correction (10x max):", (mlcAmount * 1.05 * 10).toFixed(2));
-  console.log("Final display MLC:", displayMlc);
-  console.log("Calculation fixed:", isCalculationFixed);
-  
-  // Analyze the calculation step by step
-  if (calc && stageData?.price) {
-    const manualCalc = (requiredUsdc * BigInt(10) ** BigInt(saleTokenDecimals || 18)) / stageData.price;
-    const manualMlc = Number(formatUnits(manualCalc, saleTokenDecimals || 18));
-    console.log("Manual calculation check:");
-    console.log("- Manual token amount (wei):", manualCalc.toString());
-    console.log("- Manual MLC:", manualMlc);
-    console.log("- Matches contract?", Math.abs(manualMlc - purchasedMlc) < 0.01);
-  }
-  
-  if (actualUsdcDecimals !== undefined && actualUsdcDecimals !== PAYMENT_TOKEN_DECIMALS) {
-    console.error("🚨 DECIMAL MISMATCH DETECTED!");
-    console.error("Contract USDC decimals:", actualUsdcDecimals);
-    console.error("Frontend expects:", PAYMENT_TOKEN_DECIMALS);
-    console.error("This is the root cause of the calculation issue!");
-  }
-  
+
   // Calculate approval and balance status
   const needsApproval =
     allowance !== undefined ? allowance < requiredUsdc : true;
@@ -332,45 +275,30 @@ const PaymentModal = ({
       setIsBuying(false);
     }
   };
-  
-  // Approval debugging
-  console.log("=== APPROVAL DEBUG ===");
-  console.log("Current allowance (wei):", allowance?.toString());
-  console.log("Required USDC (wei):", requiredUsdc.toString());
-  console.log("Needs approval:", needsApproval);
-  console.log("Is approving:", isApproving);
-  console.log("Is buying:", isBuying);
-  
-  if (isCalculationFixed) {
-    console.warn("⚠️ MLC calculation was adjusted");
-  } else {
-    console.log("✅ Using contract calculation");
-    if (Math.abs(purchasedMlc - mlcAmount) > mlcAmount * 0.1) {
-      console.log("ℹ️ Note: mlcAmount parameter was updated in PresalePage.tsx");
-      console.log("Contract returned:", purchasedMlc, "Component expected:", mlcAmount);
-    }
-  }
 
   const handlePaymentSelect = (method: string) => {
-    if (method === "card") setStep("card");
-    else if (method === "bank") setStep("bank");
+    if (method === "bank") setStep("bank");
     else setStep("crypto");
   };
-  console.log("Wagmi chain:", chainId, "Actual MetaMask chain:", actualChainId, "Target chain:", APP_CHAIN.id, APP_CHAIN.name);
 
   const txRef = `MLC-${Date.now().toString(36).toUpperCase()}`;
 
   const ensureCorrectChain = async () => {
     if (!isConnected) throw new Error("Wallet not connected");
-    
+
     // Get actual chain ID from MetaMask directly to avoid wagmi sync issues
     let actualChainId = chainId;
     try {
       const ethereum = (window as any).ethereum;
       if (ethereum) {
-        const hexChainId = await ethereum.request({ method: 'eth_chainId' });
+        const hexChainId = await ethereum.request({ method: "eth_chainId" });
         actualChainId = parseInt(hexChainId, 16);
-        console.log("Actual MetaMask chain ID:", actualChainId, "Wagmi chain ID:", chainId);
+        console.log(
+          "Actual MetaMask chain ID:",
+          actualChainId,
+          "Wagmi chain ID:",
+          chainId,
+        );
       }
     } catch (error) {
       console.warn("Could not get actual chain ID from MetaMask:", error);
@@ -379,7 +307,7 @@ const PaymentModal = ({
     if (actualChainId === APP_CHAIN.id) return;
 
     setCryptoError(null);
-    
+
     // Always use direct MetaMask switching for better reliability
     try {
       await requestSwitchChain(APP_CHAIN);
@@ -391,7 +319,9 @@ const PaymentModal = ({
       try {
         await switchChainAsync({ chainId: APP_CHAIN.id });
       } catch (wagmiError) {
-        throw new Error(`Failed to switch to ${APP_CHAIN.name}. Please switch manually in your wallet.`);
+        throw new Error(
+          `Failed to switch to ${APP_CHAIN.name}. Please switch manually in your wallet.`,
+        );
       }
     }
   };
@@ -537,7 +467,7 @@ const PaymentModal = ({
                   </div>
 
                   <div className="space-y-3">
-                    <motion.button
+                    {/* <motion.button
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       onClick={() => handlePaymentSelect("card")}
@@ -556,7 +486,7 @@ const PaymentModal = ({
                           </p>
                         </div>
                       </div>
-                    </motion.button>
+                    </motion.button> */}
 
                     <motion.button
                       whileHover={{ scale: 1.01 }}
@@ -605,72 +535,6 @@ const PaymentModal = ({
                       </div>
                     </motion.button>
                   </div>
-                </>
-              )}
-
-              {/* Card Payment */}
-              {step === "card" && (
-                <>
-                  <div className="flex items-center gap-3 mb-6">
-                    <button
-                      onClick={() => setStep("select")}
-                      className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
-                    >
-                      <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-                    </button>
-                    <div>
-                      <h2 className="text-xl font-semibold text-foreground">
-                        Card Details
-                      </h2>
-                      <p className="text-sm text-muted-foreground">
-                        Enter your payment info
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-foreground">
-                        Card Number
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        className="mlc-input mt-1"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-sm font-medium text-foreground">
-                          Expiry
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="MM/YY"
-                          className="mlc-input mt-1"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-foreground">
-                          CVC
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="123"
-                          className="mlc-input mt-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={processPayment}
-                    className="w-full mlc-btn-primary mt-6"
-                  >
-                    Pay ${numericAmount.toFixed(2)}
-                  </motion.button>
                 </>
               )}
 
@@ -779,7 +643,15 @@ const PaymentModal = ({
                             Wrong Network
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            You're currently on {displayChainId === 8453 ? 'Base' : displayChainId === 84532 ? 'Base Sepolia' : displayChainId === 1 ? 'Ethereum Mainnet' : `Chain ${displayChainId}`}. Switch to {APP_CHAIN.name} to continue.
+                            You're currently on{" "}
+                            {displayChainId === 8453
+                              ? "Base"
+                              : displayChainId === 84532
+                                ? "Base Sepolia"
+                                : displayChainId === 1
+                                  ? "Ethereum Mainnet"
+                                  : `Chain ${displayChainId}`}
+                            . Switch to {APP_CHAIN.name} to continue.
                           </p>
                         </div>
                       </div>
@@ -874,7 +746,7 @@ const PaymentModal = ({
                                 : `Buy with ${numericAmount.toFixed(2)} USDC`}
                         </motion.button>
 
-                        <motion.button
+                        {/* <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => {
@@ -884,7 +756,7 @@ const PaymentModal = ({
                           className="w-full mlc-btn-secondary text-xs"
                         >
                           Refresh Approval Status
-                        </motion.button>
+                        </motion.button> */}
                       </div>
                     </>
                   )}
@@ -894,7 +766,7 @@ const PaymentModal = ({
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleCryptoConfirm}
-                      className="w-full mlc-btn-secondary"
+                      className="w-full mlc-btn-secondary mt-4"
                     >
                       Top Up Balance
                     </motion.button>
@@ -938,8 +810,15 @@ const PaymentModal = ({
                             Card Top-up
                           </span>
                           <p className="text-sm text-muted-foreground">
-                            Add ${(amount - (usdcBalance ? Number(usdcBalance.formatted) : 0) + 5).toFixed(2)} via
-                            card
+                            Add $
+                            {(
+                              amount -
+                              (usdcBalance
+                                ? Number(usdcBalance.formatted)
+                                : 0) +
+                              5
+                            ).toFixed(2)}{" "}
+                            via card
                           </p>
                         </div>
                       </div>

@@ -211,3 +211,7 @@
     50% { box-shadow: 0 0 40px hsl(220 100% 50% / 0.4); }
   }
 }
+
+.bd {
+  border: 1px solid red;
+}
