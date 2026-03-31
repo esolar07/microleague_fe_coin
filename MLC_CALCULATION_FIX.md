@@ -77,7 +77,7 @@ const displayMlc = Number(formatUnits(correctTokenAmount, saleTokenDecimals));
 ## Next Steps
 
 ### For Contract Owner
-1. Connect to the deployed TokenPresale contract at `0xf598CA3060fF9879f4524377f79f320EE72F4C36`
+1. Connect to the deployed TokenPresale contract at `0x86af99FC4A4DFBeAf8A9665C7a5E459ddC10524C`
 2. Call `setPaymentToken("0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", true, 6)`
 3. Verify the fix by checking that `paymentDecimals[USDC_ADDRESS]` returns `6`
 

@@ -651,6 +651,7 @@ export const tokenPresaleAbi = [
       { internalType: "uint256", name: "cliff", type: "uint256" },
       { internalType: "uint256", name: "duration", type: "uint256" },
       { internalType: "uint256", name: "releaseInterval", type: "uint256" },
+      { internalType: "uint256", name: "stageId", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",

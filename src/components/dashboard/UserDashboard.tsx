@@ -5,7 +5,7 @@ import {
   Coins, Gift, Users, Gamepad2, TrendingUp, ExternalLink, 
   Copy, CheckCircle, User, Wallet, Shield, Clock,
   Calendar, Award, ChevronRight, X, Sparkles, Zap,
-  Lock, Unlock, Timer, ArrowRight, BadgeCheck, Percent, BarChart3,
+  Lock,
   Trophy, Star
 } from "lucide-react";
 import {
@@ -22,6 +22,8 @@ import logo from "@/assets/logo.webp";
 import QuestsSection from "./QuestsSection";
 import PredictionPolls from "./PredictionPolls";
 import ClaimRequestsHistory from "./ClaimRequestsHistory";
+import MyTokensTab from "./MyTokensTab";
+import VestingTab from "./VestingTab";
 import PaymentModal from "@/components/modals/PaymentModal";
 import PresaleWidget from "@/components/presale/PresaleWidget";
 import { APP_CHAIN } from "@/config/network";
@@ -72,10 +74,6 @@ const UserDashboard = () => {
   const [purchaseAmount, setPurchaseAmount] = useState(100);
   const [isClaiming, setIsClaiming] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState(false);
-  const [showVestingClaimModal, setShowVestingClaimModal] = useState(false);
-  const [vestingClaimStep, setVestingClaimStep] = useState<"confirm" | "processing" | "done">("confirm");
-  const [autoStakeEnabled, setAutoStakeEnabled] = useState(true);
-  const [selectedClaimIndex, setSelectedClaimIndex] = useState<number | null>(null);
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">("details");
@@ -335,41 +333,6 @@ const UserDashboard = () => {
     { action: "Simulation reward", amount: "+25 Points", time: "2 days ago", type: "simulation" },
     { action: "Referral purchase bonus", amount: "+50 MLC", time: "3 days ago", type: "referral" },
   ];
-
-  // Vesting data - using real stats where available
-  const vestingData = {
-    totalVested: stats.totalMLC,
-    totalClaimed: 0,
-    totalRemaining: stats.lockedTokens,
-    currentRate: 0.01,
-    projectedRate: 0.025,
-    rateChange: "+150%",
-    stakingAPY: 12.5,
-    nextClaimDate: "Apr 12, 2026",
-    vestingStart: "Jan 12, 2026",
-    vestingEnd: "Jan 12, 2027",
-    cliffPeriod: "3 months",
-  };
-
-  const vestingSchedule = [
-    { period: "Q1 2026", date: "Apr 12, 2026", amount: 1000, percentage: 25, status: "claimable" as const, daysLeft: 0 },
-    { period: "Q2 2026", date: "Jul 12, 2026", amount: 1000, percentage: 25, status: "locked" as const, daysLeft: 152 },
-    { period: "Q3 2026", date: "Oct 12, 2026", amount: 1000, percentage: 25, status: "locked" as const, daysLeft: 244 },
-    { period: "Q4 2026", date: "Jan 12, 2027", amount: 1000, percentage: 25, status: "locked" as const, daysLeft: 336 },
-  ];
-
-  const handleVestingClaim = (index: number) => {
-    setSelectedClaimIndex(index);
-    setVestingClaimStep("confirm");
-    setShowVestingClaimModal(true);
-  };
-
-  const processVestingClaim = () => {
-    setVestingClaimStep("processing");
-    setTimeout(() => {
-      setVestingClaimStep("done");
-    }, 2500);
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -704,340 +667,25 @@ const UserDashboard = () => {
 
         {/* Tokens Tab */}
         {activeTab === "tokens" && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            {/* Connection Status for Tokens Tab */}
-            {!isConnected && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-6 rounded-xl bg-primary/5 border border-primary/20 text-center"
-              >
-                <Wallet className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Connect Your Wallet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Connect your wallet to view your MLC token balance and transaction history
-                </p>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => openConnectModal?.()}
-                  className="mlc-btn-primary"
-                >
-                  Connect Wallet
-                </motion.button>
-              </motion.div>
-            )}
-
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Token Balance Card */}
-              <div className="mlc-card-elevated">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-2xl mlc-gradient-bg flex items-center justify-center">
-                    <Coins className="w-8 h-8 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Balance</p>
-                    <p className="text-3xl font-bold text-foreground">
-                      {isConnected ? `${stats.totalMLC.toLocaleString()} MLC` : "— MLC"}
-                    </p>
-                    <p className="text-sm text-success">
-                      {isConnected ? `≈ ${(stats.totalMLC * 0.01).toFixed(2)} USD` : "Connect wallet"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-3 border-b border-border">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-warning" />
-                      <span className="text-muted-foreground">Locked (Presale)</span>
-                    </div>
-                    <span className="font-semibold text-foreground">
-                      {isConnected ? `${stats.lockedTokens.toLocaleString()} MLC` : "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-border">
-                    <div className="flex items-center gap-2">
-                      <Coins className="w-4 h-4 text-success" />
-                      <span className="text-muted-foreground">Available</span>
-                    </div>
-                    <span className="font-semibold text-foreground">
-                      {isConnected ? `${stats.availableTokens.toLocaleString()} MLC` : "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-3 border-b border-border">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="w-4 h-4 text-primary" />
-                      <span className="text-muted-foreground">USDC Balance</span>
-                    </div>
-                    <span className="font-semibold text-foreground">
-                      {isConnected ? `${stats.usdcBalance.toFixed(2)} USDC` : "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-3">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-primary" />
-                      <span className="text-muted-foreground">Unlock Date</span>
-                    </div>
-                    <span className="font-semibold text-foreground">After Presale</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Token Value */}
-              <div className="mlc-card-elevated">
-                <h3 className="text-lg font-semibold text-foreground mb-4">Token Value</h3>
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-secondary/50">
-                    <p className="text-sm text-muted-foreground mb-1">Current Price</p>
-                    <p className="text-2xl font-bold text-foreground">$0.001 <span className="text-sm text-muted-foreground">per MLC</span></p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-success/10 border border-success/20">
-                    <p className="text-sm text-muted-foreground mb-1">Phase 2 Price</p>
-                    <p className="text-2xl font-bold text-success">$0.0015 <span className="text-sm text-success/70">+50%</span></p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
-                    <p className="text-sm text-muted-foreground mb-1">Expected Launch</p>
-                    <p className="text-2xl font-bold text-primary">TBD</p>
-                  </div>
-                  
-                  {/* Quick Buy Buttons */}
-                  <div className="pt-2 border-t border-border">
-                    <p className="text-sm font-medium text-foreground mb-3">Quick Buy</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[50, 100, 250, 500].map((amount) => (
-                        <motion.button
-                          key={amount}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => handleBuyMoreMLC(amount)}
-                          className="p-3 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/20 transition-colors text-center"
-                        >
-                          <p className="text-sm font-bold text-primary">${amount}</p>
-                          <p className="text-xs text-muted-foreground">{(amount / 0.001).toLocaleString()} MLC</p>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Purchase History */}
-            <div className="mlc-card-elevated">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Purchase History</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 text-sm text-muted-foreground font-medium">Date</th>
-                      <th className="text-left py-3 text-sm text-muted-foreground font-medium">Amount</th>
-                      <th className="text-left py-3 text-sm text-muted-foreground font-medium">Price</th>
-                      <th className="text-left py-3 text-sm text-muted-foreground font-medium">Total</th>
-                      <th className="text-left py-3 text-sm text-muted-foreground font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b border-border">
-                      <td className="py-3 text-foreground">Jan 12, 2026</td>
-                      <td className="py-3 text-foreground">4,000 MLC</td>
-                      <td className="py-3 text-foreground">$0.01</td>
-                      <td className="py-3 text-foreground">$40.00</td>
-                      <td className="py-3"><span className="px-2 py-1 rounded-full bg-warning/10 text-warning text-xs">Locked</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </motion.div>
+          <MyTokensTab
+            address={address}
+            isConnected={isConnected}
+            isOnCorrectChain={isOnCorrectChain}
+            saleTokenDecimals={saleTokenDecimalsNum}
+            userTotalAllocated={userTotalAllocated}
+            userTotalClaimed={userTotalClaimed}
+            userClaimableAmount={userClaimableAmount}
+          />
         )}
 
         {/* Vesting Tab */}
         {activeTab === "vesting" && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-          >
-            {/* Vesting Overview Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="mlc-card-elevated">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Total Vested</span>
-                  <Lock className="w-4 h-4 text-primary" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{vestingData.totalVested.toLocaleString()} MLC</p>
-                <p className="text-xs text-muted-foreground mt-1">Over 4 quarters</p>
-              </div>
-              <div className="mlc-card-elevated">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Claimed</span>
-                  <Unlock className="w-4 h-4 text-success" />
-                </div>
-                <p className="text-2xl font-bold text-success">{vestingData.totalClaimed.toLocaleString()} MLC</p>
-                <p className="text-xs text-muted-foreground mt-1">{((vestingData.totalClaimed / vestingData.totalVested) * 100).toFixed(0)}% of total</p>
-              </div>
-              <div className="mlc-card-elevated">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Remaining</span>
-                  <Timer className="w-4 h-4 text-warning" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{vestingData.totalRemaining.toLocaleString()} MLC</p>
-                <p className="text-xs text-muted-foreground mt-1">Next: {vestingData.nextClaimDate}</p>
-              </div>
-              <div className="mlc-card-elevated">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Staking APY</span>
-                  <Percent className="w-4 h-4 text-primary" />
-                </div>
-                <p className="text-2xl font-bold text-primary">{vestingData.stakingAPY}%</p>
-                <p className="text-xs text-success mt-1">Auto-stake {autoStakeEnabled ? "ON" : "OFF"}</p>
-              </div>
-            </div>
-
-            {/* Vesting Schedule Card */}
-            <div className="mlc-card-elevated bg-gradient-to-r from-primary/5 via-transparent to-success/5 border-primary/20">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Lock className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground">Vesting Schedule</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {vestingData.vestingStart} → {vestingData.vestingEnd} · Cliff: {vestingData.cliffPeriod}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Claimed / Total</p>
-                    <p className="text-lg font-bold text-foreground">
-                      {vestingData.totalClaimed.toLocaleString()} / {vestingData.totalVested.toLocaleString()} MLC
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="relative h-3 rounded-full bg-secondary overflow-hidden mb-4">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(vestingData.totalClaimed / vestingData.totalVested) * 100}%` }}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-success"
-                />
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground mb-6">
-                <span>{((vestingData.totalClaimed / vestingData.totalVested) * 100).toFixed(0)}% claimed</span>
-                <span>Next: {vestingData.nextClaimDate}</span>
-              </div>
-
-              {/* Claim Schedule Items */}
-              <div className="space-y-2">
-                {vestingSchedule.map((item, index) => (
-                  <div
-                    key={index}
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border transition-colors ${
-                      item.status === "locked"
-                        ? "bg-secondary/30 border-border"
-                        : "bg-success/5 border-success/30"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        item.status === "claimable" ? "bg-success/10" : "bg-warning/10"
-                      }`}>
-                        {item.status === "locked" ? (
-                          <Lock className="w-4 h-4 text-warning" />
-                        ) : (
-                          <Unlock className="w-4 h-4 text-success" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground text-sm">{item.period}</p>
-                        <p className="text-xs text-muted-foreground">{item.date}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <p className="font-bold text-foreground text-sm">{item.amount.toLocaleString()} MLC</p>
-                      {item.status === "locked" ? (
-                        <span className="px-2.5 py-1 rounded-lg bg-warning/10 text-warning text-xs font-medium flex items-center gap-1">
-                          <Timer className="w-3 h-3" />
-                          {item.daysLeft}d
-                        </span>
-                      ) : (
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => handleVestingClaim(index)}
-                          className="px-3 py-1.5 rounded-lg bg-success text-success-foreground text-xs font-semibold flex items-center gap-1.5"
-                        >
-                          Claim <ArrowRight className="w-3 h-3" />
-                        </motion.button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Auto-Stake */}
-              <div className="mt-4 p-3 rounded-xl bg-card border border-border flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Percent className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Auto-Stake Claimed Tokens</p>
-                    <p className="text-xs text-muted-foreground">Earn {vestingData.stakingAPY}% APY automatically</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setAutoStakeEnabled(!autoStakeEnabled)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${
-                    autoStakeEnabled ? "bg-success" : "bg-secondary"
-                  }`}
-                >
-                  <motion.div
-                    animate={{ x: autoStakeEnabled ? 24 : 4 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    className="absolute top-1 w-4 h-4 rounded-full bg-card shadow-md"
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* Token Value Projection */}
-            <div className="mlc-card-elevated">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-primary" />
-                Value Projection
-              </h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-secondary/50 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Current Rate</p>
-                  <p className="text-xl font-bold text-foreground">${vestingData.currentRate}</p>
-                  <p className="text-xs text-muted-foreground">per MLC</p>
-                </div>
-                <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Projected Rate</p>
-                  <p className="text-xl font-bold text-primary">${vestingData.projectedRate}</p>
-                  <p className="text-xs text-success">{vestingData.rateChange}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-success/10 border border-success/20 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Projected Value</p>
-                  <p className="text-xl font-bold text-success">${(vestingData.totalVested * vestingData.projectedRate).toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">at launch</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Claim Requests History */}
-            <ClaimRequestsHistory />
-          </motion.div>
+          <VestingTab
+            address={address}
+            isConnected={isConnected}
+            isOnCorrectChain={isOnCorrectChain}
+            saleTokenDecimals={saleTokenDecimalsNum}
+          />
         )}
 
         {/* Leagues Tab */}
@@ -1603,158 +1251,6 @@ const UserDashboard = () => {
                         setShowClaimModal(false);
                         setClaimSuccess(false);
                       }}
-                      className="mlc-btn-primary mt-6"
-                    >
-                      Done
-                    </motion.button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Vesting Claim Modal */}
-      <AnimatePresence>
-        {showVestingClaimModal && selectedClaimIndex !== null && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                if (vestingClaimStep !== "processing") {
-                  setShowVestingClaimModal(false);
-                }
-              }}
-              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            >
-              <div className="mlc-card-elevated w-full max-w-md">
-                {vestingClaimStep === "confirm" && (
-                  <>
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                          <Unlock className="w-6 h-6 text-success" />
-                        </div>
-                        <div>
-                          <h2 className="text-xl font-semibold text-foreground">Claim Tokens</h2>
-                          <p className="text-sm text-muted-foreground">{vestingSchedule[selectedClaimIndex].period} release</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setShowVestingClaimModal(false)}
-                        className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
-                      >
-                        <X className="w-5 h-5 text-muted-foreground" />
-                      </button>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-xl bg-gradient-to-r from-success/10 to-primary/10 border border-success/20 text-center">
-                        <p className="text-sm text-muted-foreground">Tokens to Claim</p>
-                        <p className="text-3xl font-bold text-foreground mt-1">
-                          {vestingSchedule[selectedClaimIndex].amount.toLocaleString()} MLC
-                        </p>
-                        <p className="text-sm text-success mt-1">
-                          ≈ ${(vestingSchedule[selectedClaimIndex].amount * vestingData.currentRate).toFixed(2)} USD
-                        </p>
-                      </div>
-
-                      <div className="p-4 rounded-xl bg-secondary/50 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Claim amount</span>
-                          <span className="font-semibold text-foreground">{vestingSchedule[selectedClaimIndex].amount.toLocaleString()} MLC</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Current rate</span>
-                          <span className="font-semibold text-foreground">${vestingData.currentRate}</span>
-                        </div>
-                        {autoStakeEnabled && (
-                          <div className="flex justify-between items-center pt-2 border-t border-border">
-                            <span className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Percent className="w-3.5 h-3.5" /> Auto-stake
-                            </span>
-                            <span className="font-semibold text-success">Enabled ({vestingData.stakingAPY}% APY)</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
-                        <p className="text-xs text-muted-foreground flex items-start gap-2">
-                          <Shield className="w-4 h-4 flex-shrink-0 mt-0.5 text-primary" />
-                          This transaction is processed on-chain. Your tokens will appear in your wallet within a few minutes.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3 mt-6">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setShowVestingClaimModal(false)}
-                        className="flex-1 mlc-btn-secondary"
-                      >
-                        Cancel
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={processVestingClaim}
-                        className="flex-1 mlc-btn-primary flex items-center justify-center gap-2"
-                      >
-                        <Unlock className="w-4 h-4" />
-                        Confirm Claim
-                      </motion.button>
-                    </div>
-                  </>
-                )}
-
-                {vestingClaimStep === "processing" && (
-                  <div className="py-12 text-center">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full mx-auto mb-6"
-                    />
-                    <h2 className="text-xl font-semibold text-foreground">Processing Claim</h2>
-                    <p className="text-muted-foreground mt-2">Confirming on-chain transaction...</p>
-                    <p className="text-xs text-muted-foreground mt-1">This usually takes less than a minute</p>
-                  </div>
-                )}
-
-                {vestingClaimStep === "done" && (
-                  <div className="py-8 text-center">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", duration: 0.5 }}
-                      className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4"
-                    >
-                      <CheckCircle className="w-10 h-10 text-success" />
-                    </motion.div>
-                    <h2 className="text-xl font-semibold text-foreground">Tokens Claimed!</h2>
-                    <p className="text-muted-foreground mt-2">
-                      <span className="font-bold text-primary">{vestingSchedule[selectedClaimIndex].amount.toLocaleString()} MLC</span> added to your wallet
-                    </p>
-                    {autoStakeEnabled && (
-                      <p className="text-sm text-success mt-2 flex items-center justify-center gap-1">
-                        <BadgeCheck className="w-4 h-4" />
-                        Auto-staked at {vestingData.stakingAPY}% APY
-                      </p>
-                    )}
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setShowVestingClaimModal(false)}
                       className="mlc-btn-primary mt-6"
                     >
                       Done
