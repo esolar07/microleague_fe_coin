@@ -35,6 +35,8 @@ import {
 import { erc20Abi } from "@/contracts/erc20Abi";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 import { approveErc20, buyWithToken } from "@/services/presale";
+import { generateOnrampUrl, fetchOnrampUrl } from "@/services/onramp";
+import { COINBASE_PROJECT_ID } from "@/config/onramp";
 import { formatBlockchainError } from "@/utils/formatError";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
 
@@ -81,6 +83,8 @@ const PaymentModal = ({
   const [isApproving, setIsApproving] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
   const [autoSwitchAttempted, setAutoSwitchAttempted] = useState(false);
+  const [onrampError, setOnrampError] = useState<string | null>(null);
+  const [onrampUrl, setOnrampUrl] = useState<string | null>(null);
 
   const [actualChainId, setActualChainId] = useState<number | null>(null);
 
@@ -145,7 +149,7 @@ const PaymentModal = ({
     actualUsdcDecimals || PAYMENT_TOKEN_DECIMALS,
   );
 
-  const { data: usdcBalance } = useBalance({
+  const { data: usdcBalance, refetch: refetchUsdcBalance } = useBalance({
     address,
     token: USDC_ADDRESS,
     chainId: APP_CHAIN.id,
@@ -273,6 +277,32 @@ const PaymentModal = ({
     } finally {
       setIsApproving(false);
       setIsBuying(false);
+    }
+  };
+
+  const handleCoinbaseOnramp = async () => {
+    setOnrampError(null);
+    try {
+      const url = await fetchOnrampUrl({
+        destinationAddress: address!,
+        presetFiatAmount: Math.ceil(numericAmount - Number(usdcBalance?.formatted ?? 0)),
+        redirectUrl: window.location.href,
+      });
+      const popup = window.open(url, '_blank');
+      if (popup === null) {
+        setOnrampUrl(url);
+        setOnrampError("Popup was blocked. Click the link below to open Coinbase Onramp manually.");
+      }
+    } catch (err) {
+      setOnrampError(err instanceof Error ? err.message : "Failed to open Coinbase Onramp.");
+    }
+  };
+
+  const handleRefreshBalance = async () => {
+    const result = await refetchUsdcBalance();
+    const refreshed = result.data?.value ?? 0n;
+    if (refreshed >= requiredUsdc) {
+      setStep("crypto");
     }
   };
 
@@ -794,6 +824,19 @@ const PaymentModal = ({
                     </div>
                   </div>
 
+                  {/* Shortfall summary */}
+                  {(() => {
+                    const shortfall = Math.ceil(numericAmount - Number(usdcBalance?.formatted ?? 0));
+                    return (
+                      <div className="bg-secondary/50 rounded-xl p-4 mb-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Amount needed</span>
+                          <span className="text-lg font-semibold text-foreground">${shortfall} USD</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="space-y-3">
                     <motion.button
                       whileHover={{ scale: 1.01 }}
@@ -827,8 +870,9 @@ const PaymentModal = ({
                     <motion.button
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
-                      onClick={processPayment}
-                      className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left"
+                      onClick={handleCoinbaseOnramp}
+                      disabled={!COINBASE_PROJECT_ID || !address}
+                      className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">🔵</span>
@@ -837,12 +881,47 @@ const PaymentModal = ({
                             Coinbase Onramp
                           </span>
                           <p className="text-sm text-muted-foreground">
-                            Fast, low fees
+                            Buy ~${Math.ceil(numericAmount - Number(usdcBalance?.formatted ?? 0))} USDC · Fast, low fees
                           </p>
                         </div>
                       </div>
                     </motion.button>
                   </div>
+
+                  {/* Onramp error banner */}
+                  {onrampError && (
+                    <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 mt-4">
+                      <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-destructive">
+                          Coinbase Onramp error
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {onrampError}
+                        </p>
+                        {onrampUrl && (
+                          <a
+                            href={onrampUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary underline mt-1 inline-block"
+                          >
+                            Open Coinbase Onramp manually
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Refresh Balance */}
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleRefreshBalance}
+                    className="w-full mlc-btn-secondary mt-4"
+                  >
+                    Refresh Balance
+                  </motion.button>
                 </>
               )}
 

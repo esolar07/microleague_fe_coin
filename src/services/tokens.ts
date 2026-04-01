@@ -69,6 +69,16 @@ export async function getTokenTransactions(
   );
 }
 
+export async function getClaimTransactions(
+  walletAddress: string,
+  page: number,
+  limit: number
+): Promise<TransactionPage> {
+  return apiFetch<TransactionPage>(
+    `/transactions/address/${walletAddress}?type=Claim&page=${page}&limit=${limit}`
+  );
+}
+
 export async function getVestingSchedules(walletAddress: string): Promise<VestingScheduleRecord[]> {
   return apiFetch<VestingScheduleRecord[]>(`/vesting/${walletAddress}`);
 }

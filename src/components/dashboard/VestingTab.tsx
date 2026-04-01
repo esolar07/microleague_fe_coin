@@ -1,13 +1,14 @@
 // Feature: dashboard-tokens-vesting
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useReadContract, useWriteContract } from "wagmi";
 import { formatUnits } from "viem";
 import { motion } from "framer-motion";
-import { Wallet, AlertTriangle, Lock, Clock } from "lucide-react";
+import { Wallet, AlertTriangle, Lock, Clock, ExternalLink, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { APP_CHAIN } from "@/config/network";
 import { PRESALE_ADDRESS } from "@/config/presale";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
+import { getClaimTransactions, TransactionPage } from "@/services/tokens";
 import VestingClaimModal from "./VestingClaimModal";
 
 interface VestingTabProps {
@@ -39,7 +40,26 @@ function getVestingStatus(now: number, startTime: number, cliff: number, duratio
 }
 
 function formatDate(unix: number): string {
-  return new Date(unix * 1000).toLocaleDateString();
+  return new Date(unix * 1000).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatInterval(seconds: number): string {
+  if (seconds >= 86400 * 30) return `Every ${Math.round(seconds / (86400 * 30))} month(s)`;
+  if (seconds >= 86400 * 7) return `Every ${Math.round(seconds / (86400 * 7))} week(s)`;
+  if (seconds >= 86400) return `Every ${Math.round(seconds / 86400)} day(s)`;
+  if (seconds >= 3600) return `Every ${Math.round(seconds / 3600)} hour(s)`;
+  return `Every ${seconds}s`;
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds >= 86400 * 30) return `${Math.round(seconds / (86400 * 30))} month(s)`;
+  if (seconds >= 86400 * 7) return `${Math.round(seconds / (86400 * 7))} week(s)`;
+  if (seconds >= 86400) return `${Math.round(seconds / 86400)} day(s)`;
+  return `${seconds}s`;
 }
 
 type ScheduleResult = readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint];
@@ -68,6 +88,24 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
   const [modalStep, setModalStep] = useState<"confirm" | "processing" | "done">("confirm");
   const [modalError, setModalError] = useState<string | undefined>(undefined);
   const [claimableForModal, setClaimableForModal] = useState(0);
+
+  // Claim history state
+  const [claimPage, setClaimPage] = useState(1);
+  const [claimData, setClaimData] = useState<TransactionPage | null>(null);
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    setClaimLoading(true);
+    setClaimError(null);
+    getClaimTransactions(address, claimPage, 10)
+      .then((result) => { if (!cancelled) setClaimData(result); })
+      .catch((err: unknown) => { if (!cancelled) setClaimError(err instanceof Error ? err.message : "Failed to load claim history"); })
+      .finally(() => { if (!cancelled) setClaimLoading(false); });
+    return () => { cancelled = true; };
+  }, [address, claimPage]);
 
   // const { data: claimEnabled } = useReadContract({
   //   abi: tokenPresaleAbi,
@@ -118,6 +156,9 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
     s2.refetch();
     s3.refetch();
     s4.refetch();
+    // Re-trigger claim history fetch by resetting to page 1
+    setClaimPage(1);
+    setClaimData(null);
   };
 
   const { writeContractAsync } = useWriteContract();
@@ -238,10 +279,24 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
                   <div><p className="text-xs text-muted-foreground">Claimed</p><p className="font-medium text-foreground">{s.claimed.toLocaleString(undefined, { maximumFractionDigits: 4 })} MLC</p></div>
                   <div><p className="text-xs text-muted-foreground">Vested So Far</p><p className="font-medium text-foreground">{s.vested.toLocaleString(undefined, { maximumFractionDigits: 4 })} MLC</p></div>
                   <div><p className="text-xs text-muted-foreground">Claimable</p><p className="font-medium text-success">{s.claimable.toLocaleString(undefined, { maximumFractionDigits: 4 })} MLC</p></div>
-                  <div><p className="text-xs text-muted-foreground">Start Date</p><p className="font-medium text-foreground">{formatDate(s.startTime)}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Cliff End</p><p className="font-medium text-foreground">{formatDate(s.startTime + s.cliff)}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Vesting End</p><p className="font-medium text-foreground">{formatDate(s.startTime + s.cliff + s.duration)}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Release Interval</p><p className="font-medium text-foreground">{s.releaseInterval}s</p></div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Start Date</p>
+                    <p className="font-medium text-foreground">{formatDate(s.startTime)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Cliff Period</p>
+                    <p className="font-medium text-foreground">{formatDuration(s.cliff)}</p>
+                    <p className="text-xs text-muted-foreground">ends {formatDate(s.startTime + s.cliff)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Vesting Duration</p>
+                    <p className="font-medium text-foreground">{formatDuration(s.duration)}</p>
+                    <p className="text-xs text-muted-foreground">ends {formatDate(s.startTime + s.cliff + s.duration)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Release Frequency</p>
+                    <p className="font-medium text-foreground">{formatInterval(s.releaseInterval)}</p>
+                  </div>
                 </div>
               </div>
             );
@@ -283,6 +338,101 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
         step={modalStep}
         errorMessage={modalError}
       />
+
+      {/* Claim History */}
+      <div className="mlc-card-elevated p-4 space-y-4">
+        <h3 className="text-base font-semibold text-foreground">Claim History</h3>
+
+        {claimError && (
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3">
+            <p className="text-sm text-red-400">{claimError}</p>
+            <button
+              className="mlc-btn-secondary text-sm px-3 py-1.5 flex items-center gap-1"
+              onClick={() => { setClaimError(null); setClaimPage((p) => p); }}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!claimError && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground text-left">
+                  <th className="pb-2 pr-4 font-medium">Date</th>
+                  <th className="pb-2 pr-4 font-medium">MLC Claimed</th>
+                  <th className="pb-2 font-medium">Tx Hash</th>
+                </tr>
+              </thead>
+              <tbody>
+                {claimLoading
+                  ? Array.from({ length: 3 }).map((_, i) => (
+                      <tr key={i} className="border-b border-border/50">
+                        {[0, 1, 2].map((j) => (
+                          <td key={j} className="py-3 pr-4">
+                            <span className="bg-secondary/50 rounded animate-pulse h-4 w-20 inline-block" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  : claimData?.data.map((tx) => (
+                      <tr key={tx.txHash} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
+                        <td className="py-3 pr-4 text-muted-foreground">
+                          {new Date(tx.timestamp * 1000).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 pr-4 text-success font-medium">
+                          +{tx.tokens.toLocaleString(undefined, { maximumFractionDigits: 4 })} MLC
+                        </td>
+                        <td className="py-3">
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${tx.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-primary hover:underline font-mono text-xs"
+                          >
+                            {tx.txHash.slice(0, 8)}...{tx.txHash.slice(-6)}
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+              </tbody>
+            </table>
+
+            {!claimLoading && claimData?.data.length === 0 && (
+              <p className="py-8 text-center text-muted-foreground text-sm">
+                No claim history found
+              </p>
+            )}
+          </div>
+        )}
+
+        {claimData && claimData.totalPages > 1 && (
+          <div className="flex items-center justify-between pt-2">
+            <button
+              className="mlc-btn-secondary text-sm px-3 py-1.5 flex items-center gap-1 disabled:opacity-40"
+              disabled={claimPage <= 1}
+              onClick={() => setClaimPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Prev
+            </button>
+            <span className="text-sm text-muted-foreground">
+              Page {claimPage} / {claimData.totalPages}
+            </span>
+            <button
+              className="mlc-btn-secondary text-sm px-3 py-1.5 flex items-center gap-1 disabled:opacity-40"
+              disabled={claimPage >= claimData.totalPages}
+              onClick={() => setClaimPage((p) => Math.min(claimData.totalPages, p + 1))}
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
