@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -35,7 +35,7 @@ import {
 import { erc20Abi } from "@/contracts/erc20Abi";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 import { approveErc20, buyWithToken } from "@/services/presale";
-import { generateOnrampUrl, fetchOnrampUrl } from "@/services/onramp";
+import { fetchOnrampUrl } from "@/services/onramp";
 import { COINBASE_PROJECT_ID } from "@/config/onramp";
 import { formatBlockchainError } from "@/utils/formatError";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
@@ -85,48 +85,33 @@ const PaymentModal = ({
   const [autoSwitchAttempted, setAutoSwitchAttempted] = useState(false);
   const [onrampError, setOnrampError] = useState<string | null>(null);
   const [onrampUrl, setOnrampUrl] = useState<string | null>(null);
-
   const [actualChainId, setActualChainId] = useState<number | null>(null);
 
+  // Stable ref for txRef — generated once per modal open, not every render
+  const txRefRef = useRef(`MLC-${Date.now().toString(36).toUpperCase()}`);
+  const txRef = txRefRef.current;
+
   const { openConnectModal } = useConnectModal();
-  const { address, isConnected, connector } = useAccount();
+  const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
 
-  // Get actual chain ID from MetaMask directly
+  // Sync actualChainId from MetaMask on connect, and listen for chain changes.
+  // Only depends on isConnected — not chainId — to avoid re-running on every wagmi poll.
   useEffect(() => {
-    const getActualChainId = async () => {
-      try {
-        const ethereum = (window as any).ethereum;
-        if (ethereum) {
-          const hexChainId = await ethereum.request({ method: "eth_chainId" });
-          const actualId = parseInt(hexChainId, 16);
-          setActualChainId(actualId);
-        }
-      } catch (error) {
-        console.warn("Could not get actual chain ID:", error);
-        setActualChainId(chainId); // fallback to wagmi
-      }
-    };
+    if (!isConnected) return;
 
-    if (isConnected) {
-      getActualChainId();
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) return;
 
-      // Listen for chain changes
-      const ethereum = (window as any).ethereum;
-      if (ethereum) {
-        const handleChainChanged = (hexChainId: string) => {
-          const newChainId = parseInt(hexChainId, 16);
-          setActualChainId(newChainId);
-          console.log("Chain changed to:", newChainId);
-        };
+    ethereum.request({ method: "eth_chainId" })
+      .then((hex: string) => setActualChainId(parseInt(hex, 16)))
+      .catch(() => { /* ignore */ });
 
-        ethereum.on("chainChanged", handleChainChanged);
-        return () =>
-          ethereum.removeListener("chainChanged", handleChainChanged);
-      }
-    }
-  }, [isConnected, chainId]);
+    const handleChainChanged = (hex: string) => setActualChainId(parseInt(hex, 16));
+    ethereum.on("chainChanged", handleChainChanged);
+    return () => ethereum.removeListener("chainChanged", handleChainChanged);
+  }, [isConnected]);
 
   const displayChainId = actualChainId ?? chainId;
   const isOnCorrectChain = displayChainId === APP_CHAIN.id;
@@ -140,13 +125,16 @@ const PaymentModal = ({
     query: { enabled: Boolean(USDC_ADDRESS) },
   });
 
-  // Ensure amount is a valid number
-  const numericAmount =
-    typeof amount === "number" ? amount : parseFloat(amount) || 0;
+  // Stable numeric amount
+  const numericAmount = useMemo(
+    () => (typeof amount === "number" ? amount : parseFloat(amount) || 0),
+    [amount],
+  );
 
-  const requiredUsdc = parseUnits(
-    numericAmount.toFixed(2),
-    actualUsdcDecimals || PAYMENT_TOKEN_DECIMALS,
+  // Stable bigint — only recomputes when amount or decimals actually change
+  const requiredUsdc = useMemo(
+    () => parseUnits(numericAmount.toFixed(2), actualUsdcDecimals ?? PAYMENT_TOKEN_DECIMALS),
+    [numericAmount, actualUsdcDecimals],
   );
 
   const { data: usdcBalance, refetch: refetchUsdcBalance } = useBalance({
@@ -174,22 +162,23 @@ const PaymentModal = ({
   });
 
   const stageId = currentStage?.[0];
-  const stageData = currentStage?.[1];
+
+  // Stable args array — only changes when stageId or requiredUsdc actually change
+  const calcArgs = useMemo(
+    () =>
+      PRESALE_ADDRESS && stageId !== undefined && USDC_ADDRESS
+        ? ([stageId, USDC_ADDRESS, requiredUsdc] as const)
+        : undefined,
+    [stageId, requiredUsdc],
+  );
 
   const { data: calc } = useReadContract({
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "calculateTokenAmount",
-    args:
-      PRESALE_ADDRESS && stageId !== undefined && USDC_ADDRESS
-        ? [stageId, USDC_ADDRESS, requiredUsdc]
-        : undefined,
+    args: calcArgs,
     chainId: APP_CHAIN.id,
-    query: {
-      enabled: Boolean(
-        PRESALE_ADDRESS && stageId !== undefined && USDC_ADDRESS,
-      ),
-    },
+    query: { enabled: Boolean(calcArgs) },
   });
 
   const { data: saleTokenDecimals } = useReadContract({
@@ -202,30 +191,49 @@ const PaymentModal = ({
 
   const expectedTokens = calc?.[0];
 
-  const purchasedMlc =
-    expectedTokens !== undefined && saleTokenDecimals !== undefined
-      ? Number(formatUnits(expectedTokens, saleTokenDecimals))
-      : mlcAmount;
+  const displayMlc = useMemo(() => {
+    if (expectedTokens !== undefined && saleTokenDecimals !== undefined) {
+      return Number(formatUnits(expectedTokens, saleTokenDecimals));
+    }
+    return mlcAmount;
+  }, [expectedTokens, saleTokenDecimals, mlcAmount]);
 
-  // Contract calculation is correct - use it directly
-  let displayMlc = purchasedMlc;
-  const isCalculationFixed = false;
+  const needsApproval = allowance !== undefined ? allowance < requiredUsdc : true;
+  const insufficientFunds = usdcBalance?.value !== undefined ? usdcBalance.value < requiredUsdc : false;
 
-  // Only show debug info, don't override the contract calculation
-  if (stageData?.price && actualUsdcDecimals !== undefined) {
-    // Contract calculation should be correct now
-    displayMlc = purchasedMlc;
-  }
+  const shortfall = useMemo(
+    () => Math.ceil(numericAmount - Number(usdcBalance?.formatted ?? 0)),
+    [numericAmount, usdcBalance?.formatted],
+  );
 
-  // Calculate approval and balance status
-  const needsApproval =
-    allowance !== undefined ? allowance < requiredUsdc : true;
-  const insufficientFunds =
-    usdcBalance?.value !== undefined ? usdcBalance.value < requiredUsdc : false;
+  const ensureCorrectChain = useCallback(async () => {
+    if (!isConnected) throw new Error("Wallet not connected");
 
-  const handleAutoApproveAndBuy = async () => {
-    if (!PRESALE_ADDRESS || !USDC_ADDRESS) return;
-    if (!isConnected) return;
+    let currentChainId = chainId;
+    try {
+      const ethereum = (window as any).ethereum;
+      if (ethereum) {
+        const hex = await ethereum.request({ method: "eth_chainId" });
+        currentChainId = parseInt(hex, 16);
+      }
+    } catch { /* ignore */ }
+
+    if (currentChainId === APP_CHAIN.id) return;
+
+    setCryptoError(null);
+    try {
+      await requestSwitchChain(APP_CHAIN);
+    } catch {
+      try {
+        await switchChainAsync({ chainId: APP_CHAIN.id });
+      } catch {
+        throw new Error(`Failed to switch to ${APP_CHAIN.name}. Please switch manually in your wallet.`);
+      }
+    }
+  }, [chainId, isConnected, switchChainAsync]);
+
+  const handleAutoApproveAndBuy = useCallback(async () => {
+    if (!PRESALE_ADDRESS || !USDC_ADDRESS || !isConnected) return;
 
     if (insufficientFunds) {
       setStep("topup");
@@ -242,7 +250,6 @@ const PaymentModal = ({
 
       setStep("processing");
 
-      // 1) Approve if needed
       if (needsApproval) {
         setIsApproving(true);
         const approvalHash = await approveErc20({
@@ -251,16 +258,9 @@ const PaymentModal = ({
           amount: requiredUsdc,
         });
         setTxHash(approvalHash);
-
-        // Refresh allowance for UI state (best effort)
-        try {
-          await refetchAllowance();
-        } catch {
-          // ignore
-        }
+        try { await refetchAllowance(); } catch { /* ignore */ }
       }
 
-      // 2) Buy
       setIsBuying(true);
       const minExpectedTokens = (expectedTokens * 99n) / 100n;
       const buyHash = await buyWithToken({
@@ -278,17 +278,18 @@ const PaymentModal = ({
       setIsApproving(false);
       setIsBuying(false);
     }
-  };
+  }, [ensureCorrectChain, expectedTokens, insufficientFunds, needsApproval, refetchAllowance, requiredUsdc, isConnected]);
 
-  const handleCoinbaseOnramp = async () => {
+  const handleCoinbaseOnramp = useCallback(async () => {
+    if (!address) return;
     setOnrampError(null);
     try {
       const url = await fetchOnrampUrl({
-        destinationAddress: address!,
-        presetFiatAmount: Math.ceil(numericAmount - Number(usdcBalance?.formatted ?? 0)),
+        destinationAddress: address,
+        presetFiatAmount: shortfall,
         redirectUrl: window.location.href,
       });
-      const popup = window.open(url, '_blank');
+      const popup = window.open(url, "_blank");
       if (popup === null) {
         setOnrampUrl(url);
         setOnrampError("Popup was blocked. Click the link below to open Coinbase Onramp manually.");
@@ -296,70 +297,31 @@ const PaymentModal = ({
     } catch (err) {
       setOnrampError(err instanceof Error ? err.message : "Failed to open Coinbase Onramp.");
     }
-  };
+  }, [address, shortfall]);
 
-  const handleRefreshBalance = async () => {
+  const handleRefreshBalance = useCallback(async () => {
     const result = await refetchUsdcBalance();
     const refreshed = result.data?.value ?? 0n;
     if (refreshed >= requiredUsdc) {
       setStep("crypto");
     }
-  };
+  }, [refetchUsdcBalance, requiredUsdc]);
 
-  const handlePaymentSelect = (method: string) => {
+  const handlePaymentSelect = useCallback((method: string) => {
     if (method === "bank") setStep("bank");
     else setStep("crypto");
-  };
+  }, []);
 
-  const txRef = `MLC-${Date.now().toString(36).toUpperCase()}`;
-
-  const ensureCorrectChain = async () => {
-    if (!isConnected) throw new Error("Wallet not connected");
-
-    // Get actual chain ID from MetaMask directly to avoid wagmi sync issues
-    let actualChainId = chainId;
-    try {
-      const ethereum = (window as any).ethereum;
-      if (ethereum) {
-        const hexChainId = await ethereum.request({ method: "eth_chainId" });
-        actualChainId = parseInt(hexChainId, 16);
-        console.log(
-          "Actual MetaMask chain ID:",
-          actualChainId,
-          "Wagmi chain ID:",
-          chainId,
-        );
-      }
-    } catch (error) {
-      console.warn("Could not get actual chain ID from MetaMask:", error);
+  // Reset txRef each time the modal opens
+  useEffect(() => {
+    if (isOpen) {
+      txRefRef.current = `MLC-${Date.now().toString(36).toUpperCase()}`;
     }
-
-    if (actualChainId === APP_CHAIN.id) return;
-
-    setCryptoError(null);
-
-    // Always use direct MetaMask switching for better reliability
-    try {
-      await requestSwitchChain(APP_CHAIN);
-      console.log("Successfully switched to", APP_CHAIN.name);
-      return;
-    } catch (error) {
-      console.warn("Direct chain switch failed, trying wagmi:", error);
-      // fall back to wagmi switch prompt
-      try {
-        await switchChainAsync({ chainId: APP_CHAIN.id });
-      } catch (wagmiError) {
-        throw new Error(
-          `Failed to switch to ${APP_CHAIN.name}. Please switch manually in your wallet.`,
-        );
-      }
-    }
-  };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    // Reset between modal openings
     if (step === "select") {
       setCryptoError(null);
       setTxHash(null);
@@ -374,24 +336,12 @@ const PaymentModal = ({
     if (isSwitchingChain) return;
 
     setAutoSwitchAttempted(true);
-    (async () => {
-      try {
-        await ensureCorrectChain();
-      } catch (error) {
-        // User may reject; keep manual button available
-        setCryptoError(formatBlockchainError(error));
-      }
-    })();
-  }, [
-    autoSwitchAttempted,
-    displayChainId,
-    isConnected,
-    isOpen,
-    isSwitchingChain,
-    step,
-    isOnCorrectChain,
-    ensureCorrectChain,
-  ]);
+    ensureCorrectChain().catch((error) => {
+      setCryptoError(formatBlockchainError(error));
+    });
+  // ensureCorrectChain is stable via useCallback
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSwitchAttempted, isConnected, isOpen, isSwitchingChain, step, isOnCorrectChain]);
 
   const handleCryptoConfirm = () => {
     if (insufficientFunds) setStep("topup");
@@ -825,17 +775,12 @@ const PaymentModal = ({
                   </div>
 
                   {/* Shortfall summary */}
-                  {(() => {
-                    const shortfall = Math.ceil(numericAmount - Number(usdcBalance?.formatted ?? 0));
-                    return (
-                      <div className="bg-secondary/50 rounded-xl p-4 mb-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-muted-foreground">Amount needed</span>
-                          <span className="text-lg font-semibold text-foreground">${shortfall} USD</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  <div className="bg-secondary/50 rounded-xl p-4 mb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Amount needed</span>
+                      <span className="text-lg font-semibold text-foreground">${shortfall} USD</span>
+                    </div>
+                  </div>
 
                   <div className="space-y-3">
                     <motion.button
@@ -881,7 +826,7 @@ const PaymentModal = ({
                             Coinbase Onramp
                           </span>
                           <p className="text-sm text-muted-foreground">
-                            Buy ~${Math.ceil(numericAmount - Number(usdcBalance?.formatted ?? 0))} USDC · Fast, low fees
+                            Buy ~${shortfall} USDC · Fast, low fees
                           </p>
                         </div>
                       </div>
