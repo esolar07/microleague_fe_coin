@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -31,6 +31,7 @@ import { PRESALE_ADDRESS, USDC_ADDRESS } from "@/config/presale";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 import { useAuth } from "@/hooks/use-auth";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
+import { getRecentActivity, type ActivityRecord } from "@/services/activity";
 
 const tabs: { id: string; label: string; icon: React.ElementType; badge?: string }[] = [
   { id: "overview", label: "Overview", icon: TrendingUp },
@@ -65,6 +66,29 @@ type League = {
   totalMatches?: number;
 };
 
+function formatRelativeTime(timestamp: string): string {
+  const now = Date.now();
+  const then = new Date(timestamp).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHr = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHr / 24);
+
+  if (diffSec < 60) return "just now";
+  if (diffMin < 60) return `${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
+  if (diffHr < 24) return `${diffHr} hour${diffHr === 1 ? "" : "s"} ago`;
+  if (diffDay === 1) return "Yesterday";
+  if (diffDay < 30) return `${diffDay} days ago`;
+  return new Date(timestamp).toLocaleDateString();
+}
+
+const ACTIVITY_ICON_MAP: Record<ActivityRecord["activityType"], { icon: React.ElementType; bg: string; color: string }> = {
+  Buy: { icon: Coins, bg: "bg-primary/10", color: "text-primary" },
+  Claim: { icon: Gift, bg: "bg-success/10", color: "text-success" },
+  Vesting_Created: { icon: Lock, bg: "bg-warning/10", color: "text-warning" },
+};
+
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [copied, setCopied] = useState(false);
@@ -78,6 +102,11 @@ const UserDashboard = () => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">("details");
 
+  // Activity feed state
+  const [activityData, setActivityData] = useState<ActivityRecord[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
+
   // Wallet connection and auth
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
@@ -87,6 +116,29 @@ const UserDashboard = () => {
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const isOnCorrectChain = !isConnected || chainId === APP_CHAIN.id;
+
+  // Fetch recent activity when wallet is connected
+  useEffect(() => {
+    if (!address) {
+      setActivityData([]);
+      setActivityError(null);
+      return;
+    }
+    let cancelled = false;
+    setActivityLoading(true);
+    setActivityError(null);
+    getRecentActivity(address)
+      .then((res) => {
+        if (!cancelled) setActivityData(res.data);
+      })
+      .catch(() => {
+        if (!cancelled) setActivityError("Failed to load recent activity");
+      })
+      .finally(() => {
+        if (!cancelled) setActivityLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [address]);
 
   // Get USDC balance
   const { data: usdcBalance } = useBalance({
@@ -324,14 +376,6 @@ const UserDashboard = () => {
     { user: "charlie@***", action: "Signed up", reward: "+50 Points", date: "3 days ago" },
     { user: "david@***", action: "Ran simulation", reward: "+25 Points", date: "5 days ago" },
     { user: "eve@***", action: "Purchased 500 MLC", reward: "+25 MLC", date: "1 week ago" },
-  ];
-
-  const recentActivity = [
-    { action: "Purchased MLC", amount: "+4,000 MLC", time: "2 hours ago", type: "purchase" },
-    { action: "Earned signup bonus", amount: "+100 Points", time: "2 hours ago", type: "bonus" },
-    { action: "Referral signup", amount: "+50 Points", time: "Yesterday", type: "referral" },
-    { action: "Simulation reward", amount: "+25 Points", time: "2 days ago", type: "simulation" },
-    { action: "Referral purchase bonus", amount: "+50 MLC", time: "3 days ago", type: "referral" },
   ];
 
   return (
@@ -638,28 +682,45 @@ const UserDashboard = () => {
                 <button className="text-sm text-primary hover:underline">View all</button>
               </div>
               <div className="space-y-0">
-                {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between py-4 border-b border-border last:border-0">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        activity.type === "purchase" ? "bg-primary/10" :
-                        activity.type === "bonus" ? "bg-success/10" :
-                        activity.type === "referral" ? "bg-warning/10" : 
-                        activity.type === "simulation" ? "bg-primary/10" : "bg-secondary"
-                      }`}>
-                        {activity.type === "purchase" && <Coins className="w-5 h-5 text-primary" />}
-                        {activity.type === "bonus" && <Gift className="w-5 h-5 text-success" />}
-                        {activity.type === "referral" && <Users className="w-5 h-5 text-warning" />}
-                        {activity.type === "simulation" && <Gamepad2 className="w-5 h-5 text-primary" />}
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{activity.action}</p>
-                        <p className="text-sm text-muted-foreground">{activity.time}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold text-success">{activity.amount}</span>
+                {!isConnected ? (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground">
+                    <Wallet className="w-5 h-5 mr-2" />
+                    <span>Connect your wallet to view activity</span>
                   </div>
-                ))}
+                ) : activityLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : activityError ? (
+                  <div className="flex items-center justify-center py-8 text-destructive">
+                    <span>{activityError}</span>
+                  </div>
+                ) : activityData.length === 0 ? (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground">
+                    <span>No recent activity</span>
+                  </div>
+                ) : (
+                  activityData.map((activity) => {
+                    const mapping = ACTIVITY_ICON_MAP[activity.activityType];
+                    const IconComponent = mapping.icon;
+                    return (
+                      <div key={activity.id} className="flex items-center justify-between py-4 border-b border-border last:border-0">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${mapping.bg}`}>
+                            <IconComponent className={`w-5 h-5 ${mapping.color}`} />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{activity.action}</p>
+                            <p className="text-sm text-muted-foreground">{formatRelativeTime(activity.timestamp)}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold text-success">
+                          +{activity.amount.toLocaleString()} MLC
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </motion.div>

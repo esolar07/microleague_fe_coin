@@ -163,6 +163,10 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
     ? Number(formatUnits(canClaimData[1], decimals))
     : 0;
 
+
+    console.log(canClaimData,'canClaimData');
+    
+
   // ── Contract: per-schedule live claimable via getVestingSchedule ──
   const scheduleCount = apiSchedules?.length ?? 0;
   const contractScheduleReads = useReadContracts({
@@ -221,7 +225,17 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
   };
 
   const handleClaimClick = () => {
-    setClaimableForModal(liveClaimable);
+    // Prefer per-schedule claimable sum when global canUserClaim returns 0
+    const amount = liveClaimable > 0
+      ? liveClaimable
+      : contractScheduleReads.data?.reduce((sum, r) => {
+          if (r.status === "success") {
+            const result = r.result as readonly [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint];
+            return sum + Number(formatUnits(result[3], decimals));
+          }
+          return sum;
+        }, 0) ?? 0;
+    setClaimableForModal(amount);
     setModalError(undefined);
     setModalStep("confirm");
     setModalOpen(true);
@@ -241,8 +255,14 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
       setModalStep("done");
       refetchAll();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Transaction failed";
-      setModalError(msg.length > 120 ? msg.slice(0, 120) + "..." : msg);
+      const raw = err instanceof Error ? err.message : "Transaction failed";
+      let msg = "Transaction failed. Please try again.";
+      if (/user rejected|user denied/i.test(raw)) {
+        msg = "Transaction was rejected.";
+      } else if (/insufficient funds/i.test(raw)) {
+        msg = "Insufficient funds for this transaction.";
+      }
+      setModalError(msg);
       setModalStep("confirm");
     }
   };
@@ -491,8 +511,16 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
                         </button>
                       ) : isClaimed ? (
                         <span className="text-xs text-success font-medium px-2 py-1 rounded-full bg-success/10">Claimed</span>
-                      ) : isFullyUnlocked ? (
-                        <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-secondary/50">Unlocked</span>
+                      ) : isFullyUnlocked && !isClaimed ? (
+                        !claimEnabled ? (
+                          <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-secondary/50">Claim not enabled</span>
+                        ) : liveClaimable > 0 ? (
+                          <button onClick={handleClaimClick} className="mlc-btn-primary text-xs px-3 py-1.5 flex items-center gap-1">
+                            Claim →
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-secondary/50">Unlocked</span>
+                        )
                       ) : (
                         <span className="flex items-center gap-1 text-xs text-warning font-medium px-2 py-1 rounded-full bg-warning/10">
                           <Clock className="w-3 h-3" />{days}d
