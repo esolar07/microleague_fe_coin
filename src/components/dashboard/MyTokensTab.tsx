@@ -1,9 +1,8 @@
 // Feature: dashboard-tokens-vesting
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Wallet, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Wallet, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, RefreshCw, Coins, Lock, TrendingUp, Zap } from "lucide-react";
 import { formatUnits } from "viem";
-import { useSwitchChain } from "wagmi";
 import { APP_CHAIN } from "@/config/network";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
 import { getTokenTransactions, TransactionPage } from "@/services/tokens";
@@ -27,7 +26,6 @@ export default function MyTokensTab({
   userTotalClaimed,
   userClaimableAmount,
 }: MyTokensTabProps) {
-  const { switchChainAsync } = useSwitchChain();
 
   const [page, setPage] = useState(1);
   const [txData, setTxData] = useState<TransactionPage | null>(null);
@@ -65,10 +63,6 @@ export default function MyTokensTab({
     ? Number(formatUnits(userClaimableAmount, decimals))
     : 0;
   const lockedTokens = Math.max(0, totalAllocatedMLC - totalClaimedMLC - claimableMLC);
-
-  const skeletonCell = (
-    <span className="bg-secondary/50 rounded animate-pulse h-8 w-24 inline-block" />
-  );
 
   if (!isConnected) {
     return (
@@ -111,28 +105,55 @@ export default function MyTokensTab({
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="mlc-card-elevated p-4 space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Total MLC Allocated</p>
-          <p className="text-xl font-semibold text-foreground">
-            {isLoading ? skeletonCell : totalAllocatedMLC.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Total Allocated</p>
+            <Coins className="w-4 h-4 text-muted-foreground" />
+          </div>
+          {isLoading
+            ? <div className="h-7 w-28 bg-secondary/50 rounded animate-pulse" />
+            : <p className="text-xl font-bold text-foreground">{totalAllocatedMLC.toLocaleString(undefined, { maximumFractionDigits: 2 })} MLC</p>
+          }
+          <p className="text-xs text-muted-foreground">Total purchased</p>
+        </div>
+
+        <div className="mlc-card-elevated p-4 space-y-1">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Total Claimed</p>
+            <TrendingUp className="w-4 h-4 text-success" />
+          </div>
+          {isLoading
+            ? <div className="h-7 w-28 bg-secondary/50 rounded animate-pulse" />
+            : <p className="text-xl font-bold text-success">{totalClaimedMLC.toLocaleString(undefined, { maximumFractionDigits: 2 })} MLC</p>
+          }
+          <p className="text-xs text-muted-foreground">
+            {totalAllocatedMLC > 0
+              ? `${((totalClaimedMLC / totalAllocatedMLC) * 100).toFixed(0)}% of total`
+              : "0% of total"}
           </p>
         </div>
+
         <div className="mlc-card-elevated p-4 space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Claimed</p>
-          <p className="text-xl font-semibold text-foreground">
-            {isLoading ? skeletonCell : totalClaimedMLC.toLocaleString(undefined, { maximumFractionDigits: 4 })}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Claimable Now</p>
+            <Zap className="w-4 h-4 text-primary" />
+          </div>
+          {isLoading
+            ? <div className="h-7 w-28 bg-secondary/50 rounded animate-pulse" />
+            : <p className="text-xl font-bold text-primary">{claimableMLC.toLocaleString(undefined, { maximumFractionDigits: 2 })} MLC</p>
+          }
+          <p className="text-xs text-muted-foreground">Available to claim</p>
         </div>
+
         <div className="mlc-card-elevated p-4 space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Currently Claimable</p>
-          <p className="text-xl font-semibold text-foreground">
-            {isLoading ? skeletonCell : claimableMLC.toLocaleString(undefined, { maximumFractionDigits: 4 })}
-          </p>
-        </div>
-        <div className="mlc-card-elevated p-4 space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Locked Tokens</p>
-          <p className="text-xl font-semibold text-foreground">
-            {isLoading ? skeletonCell : lockedTokens.toLocaleString(undefined, { maximumFractionDigits: 4 })}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">Locked Tokens</p>
+            <Lock className="w-4 h-4 text-warning" />
+          </div>
+          {isLoading
+            ? <div className="h-7 w-28 bg-secondary/50 rounded animate-pulse" />
+            : <p className="text-xl font-bold text-foreground">{lockedTokens.toLocaleString(undefined, { maximumFractionDigits: 2 })} MLC</p>
+          }
+          <p className="text-xs text-muted-foreground">Still vesting</p>
         </div>
       </div>
 
