@@ -128,10 +128,6 @@ const PresalePage = () => {
         onSuccess={handlePaymentSuccess}
         amount={purchaseAmount}
         mlcAmount={purchaseAmount / 0.001}
-        onTransactionSuccess={async () => {
-          // You can add refetch logic here if needed for the presale page
-          console.log("🔄 Transaction completed on presale page");
-        }}
       />
       <AuthModal
         isOpen={showAuthModal}

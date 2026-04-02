@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Info, Zap } from "lucide-react";
+import { ArrowRight, Info, Zap, AlertTriangle } from "lucide-react";
 import { useReadContract } from "wagmi";
 import { formatUnits } from "viem";
 import { PRESALE_ADDRESS } from "@/config/presale";
@@ -20,12 +20,23 @@ const PresaleWidget = ({
 }: PresaleWidgetProps) => {
   const [usdAmount, setUsdAmount] = useState<string>("100");
 
+  // Memoize query config to prevent RPC loops
+  const queryConfig = useMemo(
+    () => ({
+      enabled: Boolean(PRESALE_ADDRESS),
+      refetchInterval: 30000, // Refetch every 30 seconds
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      gcTime: 300000, // Keep in cache for 5 minutes
+    }),
+    [],
+  );
+
   const { data: currentStage } = useReadContract({
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "currentStage",
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(PRESALE_ADDRESS) },
+    query: queryConfig,
   });
 
   const { data: saleTokenDecimals } = useReadContract({
@@ -33,19 +44,84 @@ const PresaleWidget = ({
     address: PRESALE_ADDRESS,
     functionName: "saleTokenDecimals",
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(PRESALE_ADDRESS) },
+    query: queryConfig,
   });
 
-  const stage = currentStage?.[1];
-  const stagePriceUsd =
-    stage?.price !== undefined
-      ? Number(formatUnits(stage.price, 18))
-      : undefined;
-  const effectivePrice = stagePriceUsd ?? mlcPrice;
+  // Memoize all calculations to prevent unnecessary recalculations
+  const calculatedValues = useMemo(() => {
+    const stage = currentStage?.[1];
+    const stagePriceUsd =
+      stage?.price !== undefined
+        ? Number(formatUnits(stage.price, 18))
+        : undefined;
+    const effectivePrice = stagePriceUsd ?? mlcPrice;
 
-  const mlcAmount = usdAmount
-    ? (parseFloat(usdAmount) / effectivePrice).toFixed(0)
-    : "0";
+    const mlcAmount = usdAmount
+      ? (parseFloat(usdAmount) / effectivePrice).toFixed(0)
+      : "0";
+
+    // Calculate minimum buy tokens and USD amount
+    const minBuyTokens =
+      stage?.minBuyTokens !== undefined && saleTokenDecimals !== undefined
+        ? Number(formatUnits(stage.minBuyTokens, saleTokenDecimals))
+        : 10000; // fallback to 10,000 tokens
+
+    const minUsdAmount = minBuyTokens * effectivePrice;
+    const currentUsdAmount = parseFloat(usdAmount) || 0;
+    const currentMlcAmount = parseFloat(mlcAmount) || 0;
+
+    // Validation states
+    const isBelowMinimum =
+      currentUsdAmount > 0 && currentMlcAmount < minBuyTokens;
+    const isValidAmount =
+      currentUsdAmount > 0 && currentMlcAmount >= minBuyTokens;
+
+    // Presale stats
+    const soldAmount =
+      stage?.soldAmount !== undefined && saleTokenDecimals !== undefined
+        ? Number(formatUnits(stage.soldAmount, saleTokenDecimals))
+        : 2200;
+    const totalCap =
+      stage?.offeredAmount !== undefined && saleTokenDecimals !== undefined
+        ? Number(formatUnits(stage.offeredAmount, saleTokenDecimals))
+        : 200000000;
+    const progressPercent = (soldAmount / totalCap) * 100;
+
+    const stageEnd =
+      stage?.endTime !== undefined
+        ? new Date(Number(stage.endTime) * 1000)
+        : null;
+
+    return {
+      stage,
+      effectivePrice,
+      mlcAmount,
+      minBuyTokens,
+      minUsdAmount,
+      currentUsdAmount,
+      currentMlcAmount,
+      isBelowMinimum,
+      isValidAmount,
+      soldAmount,
+      totalCap,
+      progressPercent,
+      stageEnd,
+    };
+  }, [currentStage, saleTokenDecimals, usdAmount, mlcPrice]);
+
+  const {
+    effectivePrice,
+    mlcAmount,
+    minBuyTokens,
+    minUsdAmount,
+    currentUsdAmount,
+    isBelowMinimum,
+    isValidAmount,
+    soldAmount,
+    totalCap,
+    progressPercent,
+    stageEnd,
+  } = calculatedValues;
 
   const handleAmountChange = (value: string) => {
     const numericValue = value.replace(/[^0-9.]/g, "");
@@ -53,22 +129,6 @@ const PresaleWidget = ({
   };
 
   const quickAmounts = [100, 500, 1000, 5000];
-
-  // Presale stats
-  const soldAmount =
-    stage?.soldAmount !== undefined && saleTokenDecimals !== undefined
-      ? Number(formatUnits(stage.soldAmount, saleTokenDecimals))
-      : 2200;
-  const totalCap =
-    stage?.offeredAmount !== undefined && saleTokenDecimals !== undefined
-      ? Number(formatUnits(stage.offeredAmount, saleTokenDecimals))
-      : 200000000;
-  const progressPercent = (soldAmount / totalCap) * 100;
-
-  const stageEnd =
-    stage?.endTime !== undefined
-      ? new Date(Number(stage.endTime) * 1000)
-      : null;
 
   return (
     <motion.div
@@ -137,13 +197,49 @@ const PresaleWidget = ({
             type="text"
             value={usdAmount}
             onChange={(e) => handleAmountChange(e.target.value)}
-            className="mlc-input pl-8 pr-16 text-xl font-semibold"
+            className={`mlc-input pl-8 pr-16 text-xl font-semibold ${
+              isBelowMinimum ? "border-red-500 focus:border-red-500" : ""
+            }`}
             placeholder="0.00"
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
             USD
           </span>
         </div>
+
+        {/* Minimum amount validation message */}
+        {isBelowMinimum && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg"
+          >
+            <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="text-red-700 font-medium">
+                Minimum purchase required
+              </p>
+              <p className="text-red-600">
+                You must buy at least {minBuyTokens.toLocaleString()} MLC tokens
+                (${minUsdAmount.toFixed(2)} USD minimum)
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Helpful info about minimum */}
+        {currentUsdAmount === 0 && (
+          <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="text-blue-700 font-medium">Minimum Purchase</p>
+              <p className="text-blue-600">
+                Minimum buy amount: {minBuyTokens.toLocaleString()} MLC tokens
+                (${minUsdAmount.toFixed(2)} USD)
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Quick Amount Buttons */}
@@ -161,6 +257,19 @@ const PresaleWidget = ({
             ${amount}
           </button>
         ))}
+        {/* Add minimum amount button if it's not already in quick amounts */}
+        {!quickAmounts.includes(Math.ceil(minUsdAmount)) && (
+          <button
+            onClick={() => setUsdAmount(Math.ceil(minUsdAmount).toString())}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all duration-200 border-2 border-primary/30 ${
+              usdAmount === Math.ceil(minUsdAmount).toString()
+                ? "bg-primary text-primary-foreground"
+                : "bg-primary/10 text-primary hover:bg-primary/20"
+            }`}
+          >
+            Min ${Math.ceil(minUsdAmount)}
+          </button>
+        )}
       </div>
 
       {/* MLC Output */}
@@ -191,12 +300,17 @@ const PresaleWidget = ({
 
       {/* Buy Button */}
       <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => onBuyClick(parseFloat(usdAmount) || 0)}
-        className="w-full mlc-btn-primary flex items-center justify-center gap-2 text-lg py-4"
+        whileHover={{ scale: isValidAmount ? 1.02 : 1 }}
+        whileTap={{ scale: isValidAmount ? 0.98 : 1 }}
+        onClick={() => isValidAmount && onBuyClick(parseFloat(usdAmount) || 0)}
+        disabled={!isValidAmount}
+        className={`w-full flex items-center justify-center gap-2 text-lg py-4 transition-all duration-200 ${
+          isValidAmount
+            ? "mlc-btn-primary cursor-pointer"
+            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+        }`}
       >
-        Buy MLC
+        {isBelowMinimum ? "Amount Too Low" : "Buy MLC"}
         <ArrowRight className="w-5 h-5" />
       </motion.button>
 
