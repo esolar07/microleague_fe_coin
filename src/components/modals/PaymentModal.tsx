@@ -46,6 +46,7 @@ interface PaymentModalProps {
   onSuccess: () => void;
   amount: number;
   mlcAmount: number;
+  onTransactionSuccess?: () => Promise<void>; // New callback for refetching stats
 }
 
 type PaymentStep =
@@ -73,6 +74,7 @@ const PaymentModal = ({
   onSuccess,
   amount,
   mlcAmount,
+  onTransactionSuccess,
 }: PaymentModalProps) => {
   const [step, setStep] = useState<PaymentStep>("select");
   const [receiptUploaded, setReceiptUploaded] = useState(false);
@@ -104,11 +106,15 @@ const PaymentModal = ({
     const ethereum = (window as any).ethereum;
     if (!ethereum) return;
 
-    ethereum.request({ method: "eth_chainId" })
+    ethereum
+      .request({ method: "eth_chainId" })
       .then((hex: string) => setActualChainId(parseInt(hex, 16)))
-      .catch(() => { /* ignore */ });
+      .catch(() => {
+        /* ignore */
+      });
 
-    const handleChainChanged = (hex: string) => setActualChainId(parseInt(hex, 16));
+    const handleChainChanged = (hex: string) =>
+      setActualChainId(parseInt(hex, 16));
     ethereum.on("chainChanged", handleChainChanged);
     return () => ethereum.removeListener("chainChanged", handleChainChanged);
   }, [isConnected]);
@@ -133,7 +139,11 @@ const PaymentModal = ({
 
   // Stable bigint — only recomputes when amount or decimals actually change
   const requiredUsdc = useMemo(
-    () => parseUnits(numericAmount.toFixed(2), actualUsdcDecimals ?? PAYMENT_TOKEN_DECIMALS),
+    () =>
+      parseUnits(
+        numericAmount.toFixed(2),
+        actualUsdcDecimals ?? PAYMENT_TOKEN_DECIMALS,
+      ),
     [numericAmount, actualUsdcDecimals],
   );
 
@@ -198,8 +208,10 @@ const PaymentModal = ({
     return mlcAmount;
   }, [expectedTokens, saleTokenDecimals, mlcAmount]);
 
-  const needsApproval = allowance !== undefined ? allowance < requiredUsdc : true;
-  const insufficientFunds = usdcBalance?.value !== undefined ? usdcBalance.value < requiredUsdc : false;
+  const needsApproval =
+    allowance !== undefined ? allowance < requiredUsdc : true;
+  const insufficientFunds =
+    usdcBalance?.value !== undefined ? usdcBalance.value < requiredUsdc : false;
 
   const shortfall = useMemo(
     () => Math.ceil(numericAmount - Number(usdcBalance?.formatted ?? 0)),
@@ -216,7 +228,9 @@ const PaymentModal = ({
         const hex = await ethereum.request({ method: "eth_chainId" });
         currentChainId = parseInt(hex, 16);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     if (currentChainId === APP_CHAIN.id) return;
 
@@ -227,7 +241,9 @@ const PaymentModal = ({
       try {
         await switchChainAsync({ chainId: APP_CHAIN.id });
       } catch {
-        throw new Error(`Failed to switch to ${APP_CHAIN.name}. Please switch manually in your wallet.`);
+        throw new Error(
+          `Failed to switch to ${APP_CHAIN.name}. Please switch manually in your wallet.`,
+        );
       }
     }
   }, [chainId, isConnected, switchChainAsync]);
@@ -258,7 +274,11 @@ const PaymentModal = ({
           amount: requiredUsdc,
         });
         setTxHash(approvalHash);
-        try { await refetchAllowance(); } catch { /* ignore */ }
+        try {
+          await refetchAllowance();
+        } catch {
+          /* ignore */
+        }
       }
 
       setIsBuying(true);
@@ -270,6 +290,12 @@ const PaymentModal = ({
         minExpectedTokens,
       });
       setTxHash(buyHash);
+
+      // Refetch stats after successful transaction
+      if (onTransactionSuccess) {
+        await onTransactionSuccess();
+      }
+
       setStep("success");
     } catch (error) {
       setCryptoError(formatBlockchainError(error));
@@ -278,7 +304,15 @@ const PaymentModal = ({
       setIsApproving(false);
       setIsBuying(false);
     }
-  }, [ensureCorrectChain, expectedTokens, insufficientFunds, needsApproval, refetchAllowance, requiredUsdc, isConnected]);
+  }, [
+    ensureCorrectChain,
+    expectedTokens,
+    insufficientFunds,
+    needsApproval,
+    refetchAllowance,
+    requiredUsdc,
+    isConnected,
+  ]);
 
   const handleCoinbaseOnramp = useCallback(async () => {
     if (!address) return;
@@ -292,10 +326,14 @@ const PaymentModal = ({
       const popup = window.open(url, "_blank");
       if (popup === null) {
         setOnrampUrl(url);
-        setOnrampError("Popup was blocked. Click the link below to open Coinbase Onramp manually.");
+        setOnrampError(
+          "Popup was blocked. Click the link below to open Coinbase Onramp manually.",
+        );
       }
     } catch (err) {
-      setOnrampError(err instanceof Error ? err.message : "Failed to open Coinbase Onramp.");
+      setOnrampError(
+        err instanceof Error ? err.message : "Failed to open Coinbase Onramp.",
+      );
     }
   }, [address, shortfall]);
 
@@ -339,9 +377,16 @@ const PaymentModal = ({
     ensureCorrectChain().catch((error) => {
       setCryptoError(formatBlockchainError(error));
     });
-  // ensureCorrectChain is stable via useCallback
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoSwitchAttempted, isConnected, isOpen, isSwitchingChain, step, isOnCorrectChain]);
+    // ensureCorrectChain is stable via useCallback
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    autoSwitchAttempted,
+    isConnected,
+    isOpen,
+    isSwitchingChain,
+    step,
+    isOnCorrectChain,
+  ]);
 
   const handleCryptoConfirm = () => {
     if (insufficientFunds) setStep("topup");
@@ -777,8 +822,12 @@ const PaymentModal = ({
                   {/* Shortfall summary */}
                   <div className="bg-secondary/50 rounded-xl p-4 mb-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Amount needed</span>
-                      <span className="text-lg font-semibold text-foreground">${shortfall} USD</span>
+                      <span className="text-sm text-muted-foreground">
+                        Amount needed
+                      </span>
+                      <span className="text-lg font-semibold text-foreground">
+                        ${shortfall} USD
+                      </span>
                     </div>
                   </div>
 

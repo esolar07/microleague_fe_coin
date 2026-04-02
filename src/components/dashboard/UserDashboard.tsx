@@ -132,6 +132,8 @@ const UserDashboard = () => {
   const [claimSuccess, setClaimSuccess] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showRefreshSuccess, setShowRefreshSuccess] = useState(false);
   const { address, isConnected } = useAccount();
   const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">(
     "details",
@@ -238,6 +240,17 @@ const UserDashboard = () => {
     };
   }, [address]);
 
+  // Refetch stats when address changes (wallet connection/switch)
+  useEffect(() => {
+    if (address && isConnected) {
+      // Small delay to ensure wallet is fully connected
+      const timer = setTimeout(() => {
+        refetchAllStats();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [address, isConnected]);
+
   // Save user profile using React Query
   const saveUserProfile = async () => {
     if (!address) return;
@@ -315,8 +328,8 @@ const UserDashboard = () => {
     }
   };
 
-  // Get USDC balance
-  const { data: usdcBalance } = useBalance({
+  // Get USDC balance with refetch function
+  const { data: usdcBalance, refetch: refetchUsdcBalance } = useBalance({
     address,
     token: USDC_ADDRESS,
     chainId: APP_CHAIN.id,
@@ -344,80 +357,86 @@ const UserDashboard = () => {
   const saleTokenDecimalsNum =
     saleTokenDecimals !== undefined ? Number(saleTokenDecimals) : undefined;
 
-  // Get user's total vested amount (total MLC purchased)
-  const { data: userVestedAmount } = useReadContract({
-    abi: tokenPresaleAbi,
-    address: PRESALE_ADDRESS,
-    functionName: "vestedAmount",
-    args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
-  });
+  // Get user's total vested amount (total MLC purchased) with refetch
+  const { data: userVestedAmount, refetch: refetchVestedAmount } =
+    useReadContract({
+      abi: tokenPresaleAbi,
+      address: PRESALE_ADDRESS,
+      functionName: "vestedAmount",
+      args: address ? [address] : undefined,
+      chainId: APP_CHAIN.id,
+      query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+    });
 
-  // Get user's total allocated amount (total MLC purchased/assigned)
-  const { data: userTotalAllocated } = useReadContract({
-    abi: tokenPresaleAbi,
-    address: PRESALE_ADDRESS,
-    functionName: "totalAllocated",
-    args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
-  });
+  // Get user's total allocated amount (total MLC purchased/assigned) with refetch
+  const { data: userTotalAllocated, refetch: refetchTotalAllocated } =
+    useReadContract({
+      abi: tokenPresaleAbi,
+      address: PRESALE_ADDRESS,
+      functionName: "totalAllocated",
+      args: address ? [address] : undefined,
+      chainId: APP_CHAIN.id,
+      query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+    });
 
-  // Get user's total claimed amount
-  const { data: userTotalClaimed } = useReadContract({
-    abi: tokenPresaleAbi,
-    address: PRESALE_ADDRESS,
-    functionName: "totalClaimed",
-    args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
-  });
+  // Get user's total claimed amount with refetch
+  const { data: userTotalClaimed, refetch: refetchTotalClaimed } =
+    useReadContract({
+      abi: tokenPresaleAbi,
+      address: PRESALE_ADDRESS,
+      functionName: "totalClaimed",
+      args: address ? [address] : undefined,
+      chainId: APP_CHAIN.id,
+      query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+    });
 
-  // Get user's claimable amount (available MLC)
-  const { data: userClaimableAmount } = useReadContract({
-    abi: tokenPresaleAbi,
-    address: PRESALE_ADDRESS,
-    functionName: "claimableAmount",
-    args: address ? [address] : undefined,
-    chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
-  });
+  // Get user's claimable amount (available MLC) with refetch
+  const { data: userClaimableAmount, refetch: refetchClaimableAmount } =
+    useReadContract({
+      abi: tokenPresaleAbi,
+      address: PRESALE_ADDRESS,
+      functionName: "claimableAmount",
+      args: address ? [address] : undefined,
+      chainId: APP_CHAIN.id,
+      query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+    });
 
-  // Get user's purchases for current stage
+  // Get user's purchases for current stage with refetch
   const currentStageId = currentStage?.[0];
-  const { data: userStagePurchases } = useReadContract({
-    abi: tokenPresaleAbi,
-    address: PRESALE_ADDRESS,
-    functionName: "buyerPurchasedForStage",
-    args:
-      address && currentStageId !== undefined
-        ? [currentStageId, address]
-        : undefined,
-    chainId: APP_CHAIN.id,
-    query: {
-      enabled: Boolean(
-        address && PRESALE_ADDRESS && currentStageId !== undefined,
-      ),
-    },
-  });
+  const { data: userStagePurchases, refetch: refetchStagePurchases } =
+    useReadContract({
+      abi: tokenPresaleAbi,
+      address: PRESALE_ADDRESS,
+      functionName: "buyerPurchasedForStage",
+      args:
+        address && currentStageId !== undefined
+          ? [currentStageId, address]
+          : undefined,
+      chainId: APP_CHAIN.id,
+      query: {
+        enabled: Boolean(
+          address && PRESALE_ADDRESS && currentStageId !== undefined,
+        ),
+      },
+    });
 
-  // Get token amount purchased for current stage (if contract tracks it)
-  const { data: userStageTokenPurchases } = useReadContract({
-    abi: tokenPresaleAbi,
-    address: PRESALE_ADDRESS,
-    functionName: "buyerPurchased",
-    args:
-      address && currentStageId !== undefined
-        ? [currentStageId, address]
-        : undefined,
-    chainId: APP_CHAIN.id,
-    query: {
-      enabled: Boolean(
-        address && PRESALE_ADDRESS && currentStageId !== undefined,
-      ),
-    },
-  });
+  // Get token amount purchased for current stage (if contract tracks it) with refetch
+  const { data: userStageTokenPurchases, refetch: refetchStageTokenPurchases } =
+    useReadContract({
+      abi: tokenPresaleAbi,
+      address: PRESALE_ADDRESS,
+      functionName: "buyerPurchased",
+      args:
+        address && currentStageId !== undefined
+          ? [currentStageId, address]
+          : undefined,
+      chainId: APP_CHAIN.id,
+      query: {
+        enabled: Boolean(
+          address && PRESALE_ADDRESS && currentStageId !== undefined,
+        ),
+      },
+    });
 
   // Calculate real MLC amounts
   const totalAllocatedMLC =
@@ -446,6 +465,32 @@ const UserDashboard = () => {
     0,
     totalAllocatedMLC - totalClaimedMLC - claimableMLC,
   );
+
+  // Function to refetch all user stats after successful transaction
+  const refetchAllStats = async () => {
+    console.log("🔄 Refetching all user stats after transaction...");
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchUsdcBalance(),
+        refetchVestedAmount(),
+        refetchTotalAllocated(),
+        refetchTotalClaimed(),
+        refetchClaimableAmount(),
+        refetchStagePurchases(),
+        refetchStageTokenPurchases(),
+      ]);
+      console.log("✅ Successfully refetched all stats");
+
+      // Show success notification
+      setShowRefreshSuccess(true);
+      setTimeout(() => setShowRefreshSuccess(false), 3000);
+    } catch (error) {
+      console.error("❌ Error refetching stats:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Debug logging for development
   console.log("=== MLC DASHBOARD DEBUG ===");
@@ -608,10 +653,14 @@ const UserDashboard = () => {
     setShowPresaleWidget(true);
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     setShowBuyModal(false);
     setShowPresaleWidget(false);
-    // Could add success notification here
+
+    // Refetch all stats after successful purchase
+    await refetchAllStats();
+
+    // Optional: Show success notification
   };
 
   const handleWidgetBuy = (amount: number) => {
@@ -2839,7 +2888,10 @@ const UserDashboard = () => {
               >
                 <X className="w-4 h-4" />
               </button>
-              <PresaleWidget onBuyClick={handleWidgetBuy} />
+              <PresaleWidget
+                onBuyClick={handleWidgetBuy}
+                onTransactionSuccess={refetchAllStats}
+              />
             </div>
           </div>
         </>
@@ -2852,6 +2904,7 @@ const UserDashboard = () => {
         onSuccess={handlePaymentSuccess}
         amount={purchaseAmount}
         mlcAmount={purchaseAmount / 0.001}
+        onTransactionSuccess={refetchAllStats}
       />
     </div>
   );

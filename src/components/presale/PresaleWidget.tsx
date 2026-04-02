@@ -10,9 +10,14 @@ import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 interface PresaleWidgetProps {
   onBuyClick: (amount: number) => void;
   mlcPrice?: number;
+  onTransactionSuccess?: () => Promise<void>; // New callback for refetching stats
 }
 
-const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
+const PresaleWidget = ({
+  onBuyClick,
+  mlcPrice = 0.01,
+  onTransactionSuccess,
+}: PresaleWidgetProps) => {
   const [usdAmount, setUsdAmount] = useState<string>("100");
 
   const { data: currentStage } = useReadContract({
@@ -33,7 +38,9 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
 
   const stage = currentStage?.[1];
   const stagePriceUsd =
-    stage?.price !== undefined ? Number(formatUnits(stage.price, 18)) : undefined;
+    stage?.price !== undefined
+      ? Number(formatUnits(stage.price, 18))
+      : undefined;
   const effectivePrice = stagePriceUsd ?? mlcPrice;
 
   const mlcAmount = usdAmount
@@ -59,7 +66,9 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
   const progressPercent = (soldAmount / totalCap) * 100;
 
   const stageEnd =
-    stage?.endTime !== undefined ? new Date(Number(stage.endTime) * 1000) : null;
+    stage?.endTime !== undefined
+      ? new Date(Number(stage.endTime) * 1000)
+      : null;
 
   return (
     <motion.div
@@ -71,7 +80,9 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Buy MLC Tokens</h3>
+          <h3 className="text-lg font-semibold text-foreground">
+            Buy MLC Tokens
+          </h3>
           <p className="text-sm text-muted-foreground">Presale Phase 1</p>
         </div>
         <div className="mlc-badge-primary">
@@ -85,7 +96,9 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Current Price</span>
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-foreground">${effectivePrice}</span>
+            <span className="text-xl font-bold text-foreground">
+              ${effectivePrice}
+            </span>
             <span className="text-sm text-muted-foreground">USDC per MLC</span>
           </div>
         </div>
@@ -95,10 +108,12 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
       <div className="mb-6">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-muted-foreground">Presale Progress</span>
-          <span className="text-foreground font-medium">{progressPercent.toFixed(4)}% Complete</span>
+          <span className="text-foreground font-medium">
+            {progressPercent.toFixed(4)}% Complete
+          </span>
         </div>
         <div className="h-2 bg-secondary rounded-full overflow-hidden">
-          <motion.div 
+          <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${Math.max(progressPercent, 0.5)}%` }}
             transition={{ duration: 1, delay: 0.5 }}
@@ -115,7 +130,9 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
       <div className="space-y-3 mb-4">
         <label className="text-sm font-medium text-foreground">You Pay</label>
         <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+            $
+          </span>
           <input
             type="text"
             value={usdAmount}
@@ -123,7 +140,9 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
             className="mlc-input pl-8 pr-16 text-xl font-semibold"
             placeholder="0.00"
           />
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">USD</span>
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+            USD
+          </span>
         </div>
       </div>
 
@@ -146,16 +165,24 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
 
       {/* MLC Output */}
       <div className="space-y-3 mb-6">
-        <label className="text-sm font-medium text-foreground">You Receive</label>
+        <label className="text-sm font-medium text-foreground">
+          You Receive
+        </label>
         <div className="bg-accent rounded-xl p-4 border-2 border-primary/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full mlc-gradient-bg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">MLC</span>
+                <span className="text-primary-foreground font-bold text-sm">
+                  MLC
+                </span>
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{parseFloat(mlcAmount).toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground">MicroLeague Coin</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {parseFloat(mlcAmount).toLocaleString()}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  MicroLeague Coin
+                </p>
               </div>
             </div>
           </div>
@@ -185,7 +212,8 @@ const PresaleWidget = ({ onBuyClick, mlcPrice = 0.01 }: PresaleWidgetProps) => {
       <div className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
         <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
         <p>
-          Tokens are locked until presale ends. No guaranteed returns. Rewards are activity-based only.
+          Tokens are locked until presale ends. No guaranteed returns. Rewards
+          are activity-based only.
         </p>
       </div>
     </motion.div>
