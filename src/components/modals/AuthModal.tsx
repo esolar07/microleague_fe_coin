@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Mail, ArrowRight, ArrowLeft, Wallet, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import {
+  X,
+  Mail,
+  ArrowRight,
+  ArrowLeft,
+  Wallet,
+  Loader2,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAccount, useChainId, useSignMessage, useSwitchChain } from "wagmi";
 import { type BackendWalletTypeName } from "@/lib/backend-auth";
@@ -15,7 +24,13 @@ interface AuthModalProps {
   onSuccess: () => void;
 }
 
-type AuthStep = "choose" | "email" | "wallet-select" | "verify" | "otp" | "success";
+type AuthStep =
+  | "choose"
+  | "email"
+  | "wallet-select"
+  | "verify"
+  | "otp"
+  | "success";
 
 const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [step, setStep] = useState<AuthStep>("choose");
@@ -43,7 +58,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       const newOtp = [...otp];
       newOtp[index] = value;
       setOtp(newOtp);
-      
+
       // Auto-focus next input
       if (value && index < 5) {
         const nextInput = document.getElementById(`otp-${index + 1}`);
@@ -66,10 +81,16 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     const connectorName = connector?.name?.toLowerCase() ?? "";
     const connectorId = connector?.id?.toLowerCase() ?? "";
 
-    if (connectorName.includes("coinbase") || connectorId.includes("coinbase")) {
+    if (
+      connectorName.includes("coinbase") ||
+      connectorId.includes("coinbase")
+    ) {
       return "smart";
     }
-    if (connectorName.includes("walletconnect") || connectorId.includes("walletconnect")) {
+    if (
+      connectorName.includes("walletconnect") ||
+      connectorId.includes("walletconnect")
+    ) {
       return "base";
     }
     return "extension";
@@ -118,7 +139,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
       const timestamp = Date.now();
       const message = buildSignInMessage(address, timestamp);
-      const signature = await signMessageAsync({ message });
+      const signature = await signMessageAsync({ account: address, message });
 
       const result = await authenticateWallet({
         walletAddress: address,
@@ -166,7 +187,9 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       try {
         await switchChainAsync({ chainId: APP_CHAIN.id });
       } catch (error) {
-        setAuthError(error instanceof Error ? error.message : "Failed to switch network");
+        setAuthError(
+          error instanceof Error ? error.message : "Failed to switch network",
+        );
       }
     })();
   }, [
@@ -215,10 +238,15 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                         {isLogin ? "Welcome Back" : "Create Account"}
                       </h2>
                       <p className="text-sm text-muted-foreground">
-                        {isLogin ? "Sign in to continue" : "Join MicroLeague today"}
+                        {isLogin
+                          ? "Sign in to continue"
+                          : "Join MicroLeague today"}
                       </p>
                     </div>
-                    <button onClick={handleClose} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                    <button
+                      onClick={handleClose}
+                      className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                    >
                       <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </div>
@@ -237,10 +265,16 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">Continue with Email</span>
-                            <span className="mlc-badge text-[10px]">Coming soon</span>
+                            <span className="font-medium text-foreground">
+                              Continue with Email
+                            </span>
+                            <span className="mlc-badge text-[10px]">
+                              Coming soon
+                            </span>
                           </div>
-                          <p className="text-sm text-muted-foreground">No backend support yet</p>
+                          <p className="text-sm text-muted-foreground">
+                            No backend support yet
+                          </p>
                         </div>
                       </div>
                     </motion.button>
@@ -256,8 +290,12 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                           <Wallet className="w-5 h-5 text-foreground" />
                         </div>
                         <div>
-                          <span className="font-medium text-foreground">Connect Wallet</span>
-                          <p className="text-sm text-muted-foreground">Coinbase, MetaMask, Trust & more</p>
+                          <span className="font-medium text-foreground">
+                            Connect Wallet
+                          </span>
+                          <p className="text-sm text-muted-foreground">
+                            Coinbase, MetaMask, Trust & more
+                          </p>
                         </div>
                       </div>
                     </motion.button>
@@ -268,7 +306,9 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                       onClick={() => setIsLogin(!isLogin)}
                       className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
-                      {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+                      {isLogin
+                        ? "Don't have an account? Sign up"
+                        : "Already have an account? Sign in"}
                     </button>
                   </div>
 
@@ -276,9 +316,12 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                   <div className="mt-6 p-4 rounded-xl bg-warning/5 border border-warning/20 flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Security Notice</p>
+                      <p className="text-sm font-medium text-foreground">
+                        Security Notice
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        Never share your private keys, seed phrases, or wallet passwords with anyone.
+                        Never share your private keys, seed phrases, or wallet
+                        passwords with anyone.
                       </p>
                     </div>
                   </div>
@@ -289,14 +332,24 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               {step === "wallet-select" && (
                 <>
                   <div className="flex items-center gap-3 mb-6">
-                    <button onClick={handleBack} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                    <button
+                      onClick={handleBack}
+                      className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                    >
                       <ArrowLeft className="w-5 h-5 text-muted-foreground" />
                     </button>
                     <div className="flex-1">
-                      <h2 className="text-xl font-semibold text-foreground">Connect Wallet</h2>
-                      <p className="text-sm text-muted-foreground">Choose your wallet</p>
+                      <h2 className="text-xl font-semibold text-foreground">
+                        Connect Wallet
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Choose your wallet
+                      </p>
                     </div>
-                    <button onClick={handleClose} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                    <button
+                      onClick={handleClose}
+                      className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                    >
                       <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </div>
@@ -320,18 +373,28 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">Connect wallet</span>
-                            <span className="mlc-badge text-[10px]">RainbowKit</span>
+                            <span className="font-medium text-foreground">
+                              Connect wallet
+                            </span>
+                            <span className="mlc-badge text-[10px]">
+                              RainbowKit
+                            </span>
                           </div>
-                          <p className="text-sm text-muted-foreground">MetaMask, Coinbase, WalletConnect</p>
+                          <p className="text-sm text-muted-foreground">
+                            MetaMask, Coinbase, WalletConnect
+                          </p>
                         </div>
                       </div>
                     </motion.button>
                   ) : (
                     <div className="space-y-3">
                       <div className="p-4 rounded-xl border border-border bg-card">
-                        <p className="text-sm text-muted-foreground">Connected wallet</p>
-                        <p className="font-medium text-foreground break-all">{address}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Connected wallet
+                        </p>
+                        <p className="font-medium text-foreground break-all">
+                          {address}
+                        </p>
                       </div>
 
                       {chainId !== APP_CHAIN.id && (
@@ -348,17 +411,23 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                             onClick={async () => {
                               try {
                                 setAuthError(null);
-                                await switchChainAsync({ chainId: APP_CHAIN.id });
+                                await switchChainAsync({
+                                  chainId: APP_CHAIN.id,
+                                });
                               } catch (error) {
                                 setAuthError(
-                                  error instanceof Error ? error.message : "Failed to switch network"
+                                  error instanceof Error
+                                    ? error.message
+                                    : "Failed to switch network",
                                 );
                               }
                             }}
                             disabled={isSwitchingChain}
                             className="mt-3 w-full mlc-btn-primary disabled:opacity-60"
                           >
-                            {isSwitchingChain ? "Switching..." : `Switch to ${APP_CHAIN.name}`}
+                            {isSwitchingChain
+                              ? "Switching..."
+                              : `Switch to ${APP_CHAIN.name}`}
                           </motion.button>
                         </div>
                       )}
@@ -375,7 +444,8 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                       </motion.button>
 
                       <p className="text-xs text-muted-foreground text-center">
-                        This signs a message (no gas fees). It does not create a transaction.
+                        This signs a message (no gas fees). It does not create a
+                        transaction.
                       </p>
                     </div>
                   )}
@@ -386,21 +456,33 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               {step === "email" && (
                 <>
                   <div className="flex items-center gap-3 mb-6">
-                    <button onClick={handleBack} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                    <button
+                      onClick={handleBack}
+                      className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                    >
                       <ArrowLeft className="w-5 h-5 text-muted-foreground" />
                     </button>
                     <div className="flex-1">
-                      <h2 className="text-xl font-semibold text-foreground">Enter Your Email</h2>
-                      <p className="text-sm text-muted-foreground">We'll send you a verification code</p>
+                      <h2 className="text-xl font-semibold text-foreground">
+                        Enter Your Email
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        We'll send you a verification code
+                      </p>
                     </div>
-                    <button onClick={handleClose} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                    <button
+                      onClick={handleClose}
+                      className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                    >
                       <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </div>
 
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium text-foreground">Email Address</label>
+                      <label className="text-sm font-medium text-foreground">
+                        Email Address
+                      </label>
                       <input
                         type="email"
                         value={email}
@@ -424,7 +506,8 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                   </motion.button>
 
                   <p className="text-xs text-muted-foreground text-center mt-4">
-                    By continuing, you agree to our Terms of Service and Privacy Policy.
+                    By continuing, you agree to our Terms of Service and Privacy
+                    Policy.
                   </p>
                 </>
               )}
@@ -433,14 +516,24 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               {step === "otp" && (
                 <>
                   <div className="flex items-center gap-3 mb-6">
-                    <button onClick={handleBack} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                    <button
+                      onClick={handleBack}
+                      className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                    >
                       <ArrowLeft className="w-5 h-5 text-muted-foreground" />
                     </button>
                     <div className="flex-1">
-                      <h2 className="text-xl font-semibold text-foreground">Verify Email</h2>
-                      <p className="text-sm text-muted-foreground">Enter the code sent to {email}</p>
+                      <h2 className="text-xl font-semibold text-foreground">
+                        Verify Email
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Enter the code sent to {email}
+                      </p>
                     </div>
-                    <button onClick={handleClose} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                    <button
+                      onClick={handleClose}
+                      className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                    >
                       <X className="w-5 h-5 text-muted-foreground" />
                     </button>
                   </div>
@@ -496,7 +589,9 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                   <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-8 h-8 text-success" />
                   </div>
-                  <h2 className="text-xl font-semibold text-foreground">You're All Set!</h2>
+                  <h2 className="text-xl font-semibold text-foreground">
+                    You're All Set!
+                  </h2>
                   <p className="text-sm text-muted-foreground mt-2 mb-6">
                     Your account has been created successfully.
                   </p>
