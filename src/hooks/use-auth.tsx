@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import type { BackendAuthenticatedUser } from "@/lib/backend-auth";
+import { useAccount } from "wagmi";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -50,6 +51,9 @@ function readStoredAuth():
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [auth, setAuth] = useState(() => readStoredAuth());
+  const { isConnected } = useAccount();
+  // Track previous connection state to detect disconnects
+  const wasConnected = useRef(isConnected);
 
   const login = useCallback(
     (params: { token: string; user: BackendAuthenticatedUser }) => {
@@ -63,6 +67,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAuth(null);
     localStorage.removeItem(STORAGE_KEY);
   }, []);
+
+  // Auto-logout when wallet disconnects (Coinbase session ends, user disconnects, etc.)
+  useEffect(() => {
+    if (wasConnected.current && !isConnected && auth) {
+      logout();
+    }
+    wasConnected.current = isConnected;
+  }, [isConnected, auth, logout]);
 
   const token = auth?.token ?? null;
   const user = auth?.user ?? null;

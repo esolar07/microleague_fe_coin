@@ -20,12 +20,19 @@ const walletOptions = [
     name: "WalletConnect",
     description: "Scan with your mobile wallet",
     icon: "🔗",
-    popular: false,
+    popular: true,
+  },
+  {
+    id: "metamask",
+    name: "MetaMask",
+    description: "Connect with browser extension",
+    icon: "🦊",
+    popular: true,
   },
   {
     id: "email",
     name: "Email Smart Wallet",
-    description: "No seed phrases, just your email",
+    description: "Sign in with email via Coinbase",
     icon: "✉️",
     popular: true,
     recommended: true,
@@ -54,7 +61,7 @@ const WalletModal = ({ isOpen, onClose, onSelectWallet }: WalletModalProps) => {
             transition={{ duration: 0.2 }}
             className="fixed inset-0 flex items-center justify-center z-50 p-4"
           >
-            <div className="mlc-card-elevated w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="mlc-card-elevated w-full max-w-md max-h-[90vh] overflow-y-auto bd">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">

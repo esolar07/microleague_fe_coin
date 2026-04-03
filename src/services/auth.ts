@@ -6,7 +6,7 @@ export async function authenticateWallet(params: {
   signature: string;
   message: string;
   timestamp: number;
-  walletType: "smart" | "base" | "extension";
+  walletType: "smart" | "base" | "extension" | "coinbase";
   referredBy?: string;
 }): Promise<BackendAuthenticateResult> {
   return backendAuthenticate(params);

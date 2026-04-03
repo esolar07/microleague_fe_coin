@@ -18,8 +18,10 @@ const SimulatePage = lazy(() => import("./pages/SimulatePage"));
 const TournamentPage = lazy(() => import("./pages/TournamentPage"));
 const ClubhousePage = lazy(() => import("./pages/ClubhousePage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+import CoinbaseProvider from "./providers/CoinbaseProvider";
 
 const queryClient = new QueryClient();
+
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -30,30 +32,32 @@ const PageLoader = () => (
 const App = () => (
   <WagmiProvider config={wagmiConfig}>
     <QueryClientProvider client={queryClient}>
-      <RainbowKitProvider chains={chains}>
-        <ThemeProvider defaultTheme="light" storageKey="mlc-ui-theme">
-          <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/simulate" element={<SimulatePage />} />
-                    <Route path="/tournament" element={<TournamentPage />} />
-                    <Route path="/clubhouse" element={<ClubhousePage />} />
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                    <Route path="/creator" element={<CreatorPage />} />
-                    <Route path="/leaderboard" element={<LeaderboardPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-              </BrowserRouter>
-            </TooltipProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </RainbowKitProvider>
+      <CoinbaseProvider>
+        <RainbowKitProvider >
+          <ThemeProvider defaultTheme="light" storageKey="mlc-ui-theme">
+            <AuthProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/simulate" element={<SimulatePage />} />
+                      <Route path="/tournament" element={<TournamentPage />} />
+                      <Route path="/clubhouse" element={<ClubhousePage />} />
+                      <Route path="/dashboard" element={<DashboardPage />} />
+                      <Route path="/creator" element={<CreatorPage />} />
+                      <Route path="/leaderboard" element={<LeaderboardPage />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </BrowserRouter>
+              </TooltipProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </RainbowKitProvider>
+      </CoinbaseProvider>
     </QueryClientProvider>
   </WagmiProvider>
 );

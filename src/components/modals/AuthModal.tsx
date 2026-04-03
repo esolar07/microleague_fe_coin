@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -17,6 +17,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { authenticateWallet } from "@/services/auth";
 import { APP_CHAIN } from "@/config/network";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
+import {
+  useIsSignedIn,
+  useEvmAccounts,
+  useSignEvmMessage,
+  useSignOut,
+  useCreateEvmEoaAccount,
+} from "@coinbase/cdp-hooks";
+import { SignInModal } from "@coinbase/cdp-react/components/SignInModal";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -28,6 +36,7 @@ type AuthStep =
   | "choose"
   | "email"
   | "wallet-select"
+  | "coinbase-verify"
   | "verify"
   | "otp"
   | "success";
@@ -39,13 +48,36 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const { openConnectModal } = useConnectModal();
   const { address, isConnected, connector } = useAccount();
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const [autoSwitchAttempted, setAutoSwitchAttempted] = useState(false);
+
+  // Coinbase CDP hooks
+  const { isSignedIn } = useIsSignedIn();
+  const { evmAccounts } = useEvmAccounts();
+  const { signEvmMessage } = useSignEvmMessage();
+  const { signOut: coinbaseSignOut } = useSignOut();
+  const { createEvmEoaAccount } = useCreateEvmEoaAccount();
+  const coinbaseAuthInProgress = useRef(false);
+  // The ready-to-sign EVM address (only set once account objects are populated)
+  const coinbaseEvmAddress = evmAccounts?.[0]?.address ?? null;
+  // Track whether Coinbase was already signed in when modal opened
+  const wasSignedInOnOpen = useRef(false);
+
+  // When modal opens, snapshot the current Coinbase sign-in state (only on open)
+  useEffect(() => {
+    if (isOpen) {
+      wasSignedInOnOpen.current = isSignedIn;
+    } else {
+      wasSignedInOnOpen.current = false;
+    }
+    // Only run when isOpen changes, NOT when isSignedIn changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const handleEmailSubmit = () => {
     if (email && email.includes("@")) {
@@ -58,8 +90,6 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       const newOtp = [...otp];
       newOtp[index] = value;
       setOtp(newOtp);
-
-      // Auto-focus next input
       if (value && index < 5) {
         const nextInput = document.getElementById(`otp-${index + 1}`);
         nextInput?.focus();
@@ -107,7 +137,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       "",
       `URI: ${origin}`,
       "Version: 1",
-      `Chain ID: ${chainId}`,
+      `Chain ID: ${APP_CHAIN.id}`,
       `Nonce: ${timestampMs}`,
       `Issued At: ${issuedAtIso}`,
     ].join("\n");
@@ -125,9 +155,71 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
         // fall back to wagmi switch prompt
       }
     }
-
     await switchChainAsync({ chainId: APP_CHAIN.id });
   };
+
+  // Handle Coinbase email/SMS sign-in completion
+  const handleCoinbaseAuth = async (walletAddress?: string) => {
+    if (coinbaseAuthInProgress.current) return;
+    coinbaseAuthInProgress.current = true;
+    try {
+      setAuthError(null);
+      setStep("coinbase-verify");
+
+      // Ensure an EVM account exists — create one if needed
+      let evmAddr = walletAddress;
+      if (!evmAddr) {
+        evmAddr = await createEvmEoaAccount();
+      }
+
+      const timestamp = Date.now();
+      const message = buildSignInMessage(evmAddr, timestamp);
+
+      const { signature } = await signEvmMessage({
+        evmAccount: evmAddr as `0x${string}`,
+        message,
+      });
+
+      const result = await authenticateWallet({
+        walletAddress: evmAddr,
+        signature,
+        message,
+        timestamp,
+        walletType: "coinbase",
+      });
+
+      login({ token: result.token, user: result.user });
+      setStep("success");
+    } catch (error) {
+      console.error("Coinbase auth error:", error);
+      setAuthError(
+        error instanceof Error ? error.message : "Coinbase sign-in failed"
+      );
+      setStep("choose");
+      try {
+        await coinbaseSignOut();
+      } catch {
+        // ignore sign-out errors
+      }
+    } finally {
+      coinbaseAuthInProgress.current = false;
+    }
+  };
+
+  // Step 1: Detect when Coinbase sign-in completes (isSignedIn becomes true).
+  // Immediately start the auth flow — will create EVM account if needed.
+  useEffect(() => {
+    if (!isSignedIn || !isOpen || isAuthenticated) return;
+    if (coinbaseAuthInProgress.current) return;
+    if (step === "success" || step === "coinbase-verify") return;
+    if (wasSignedInOnOpen.current) return;
+
+    // Kick off auth — handleCoinbaseAuth will create the account if coinbaseEvmAddress is null
+    handleCoinbaseAuth(coinbaseEvmAddress ?? undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn, isOpen, isAuthenticated]);
+
+  // Step 2 is no longer needed since we create the account explicitly in handleCoinbaseAuth
 
   const handleWalletSignIn = async () => {
     if (!address) return;
@@ -188,7 +280,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
         await switchChainAsync({ chainId: APP_CHAIN.id });
       } catch (error) {
         setAuthError(
-          error instanceof Error ? error.message : "Failed to switch network",
+          error instanceof Error ? error.message : "Failed to switch network"
         );
       }
     })();
@@ -251,33 +343,39 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                     </button>
                   </div>
 
+                  {authError && (
+                    <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm text-foreground">
+                      {authError}
+                    </div>
+                  )}
+
                   <div className="space-y-3">
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      onClick={() => setStep("email")}
-                      disabled
-                      className="w-full p-4 rounded-xl border border-border bg-secondary/30 transition-all text-left opacity-60 cursor-not-allowed"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl mlc-gradient-bg flex items-center justify-center">
-                          <Mail className="w-5 h-5 text-primary-foreground" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">
-                              Continue with Email
-                            </span>
-                            <span className="mlc-badge text-[10px]">
-                              Coming soon
-                            </span>
+                    <SignInModal>
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl mlc-gradient-bg flex items-center justify-center">
+                            <Mail className="w-5 h-5 text-primary-foreground" />
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            No backend support yet
-                          </p>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground">
+                                Continue with Email
+                              </span>
+                              <span className="mlc-badge-primary text-[10px]">
+                                Recommended
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Sign in with email or phone via Coinbase
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </motion.button>
+                      </motion.button>
+                    </SignInModal>
 
                     <motion.button
                       whileHover={{ scale: 1.01 }}
@@ -418,7 +516,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                                 setAuthError(
                                   error instanceof Error
                                     ? error.message
-                                    : "Failed to switch network",
+                                    : "Failed to switch network"
                                 );
                               }
                             }}
@@ -450,6 +548,19 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                     </div>
                   )}
                 </>
+              )}
+
+              {/* Coinbase Verify (loading state after Coinbase email sign-in) */}
+              {step === "coinbase-verify" && (
+                <div className="py-8 text-center">
+                  <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold text-foreground">
+                    Setting up your wallet
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Signing you in with your Coinbase account...
+                  </p>
+                </div>
               )}
 
               {/* Email Form */}

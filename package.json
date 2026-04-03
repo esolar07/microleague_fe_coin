@@ -13,6 +13,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@coinbase/cdp-core": "^0.0.98",
+    "@coinbase/cdp-hooks": "^0.0.98",
+    "@coinbase/cdp-react": "^0.0.98",
+    "@coinbase/cdp-wagmi": "^0.0.98",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -42,7 +46,7 @@
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
     "@rainbow-me/rainbowkit": "^2.2.10",
-    "@tanstack/react-query": "^5.83.0",
+    "@tanstack/react-query": "^5.96.1",
     "axios": "^1.14.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -64,7 +68,7 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "viem": "^2.47.4",
+    "viem": "^2.47.6",
     "wagmi": "^2.19.5",
     "zod": "^3.25.76"
   },

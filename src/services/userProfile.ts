@@ -16,35 +16,13 @@ export interface UserProfile {
   };
 }
 
-export interface CreateUserProfileRequest {
-  email: string;
-  displayName: string;
-  walletAddress: string;
-  bio?: string;
-  preferences?: {
-    notifications: boolean;
-    newsletter: boolean;
-    twoFactor: boolean;
-  };
-}
-
 export interface UpdateUserProfileRequest {
   email?: string;
   displayName?: string;
   bio?: string;
-  preferences?: {
-    notifications?: boolean;
-    newsletter?: boolean;
-    twoFactor?: boolean;
-  };
 }
 
 type UserProfileResponse = {
-  message: string;
-  data: { profile: UserProfile };
-};
-
-type CreateProfileResponse = {
   message: string;
   data: { profile: UserProfile };
 };
@@ -54,31 +32,23 @@ type UploadAvatarResponse = {
   data: { avatarUrl: string };
 };
 
-// Get auth token from localStorage
+// Read the JWT token from the same storage key the AuthProvider uses
 const getAuthToken = (): string | null => {
-  return localStorage.getItem("authToken");
+  try {
+    const raw = localStorage.getItem("mlc-auth");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.token ?? null;
+  } catch {
+    return null;
+  }
 };
 
-// User Profile API functions
 export async function getProfile(walletAddress: string): Promise<UserProfile> {
   const response = await apiFetch<UserProfileResponse>(
     `/users/profile/${walletAddress}`,
-    {
-      method: "GET",
-      authToken: getAuthToken(),
-    },
+    { method: "GET", authToken: getAuthToken() },
   );
-  return response.data.profile;
-}
-
-export async function createProfile(
-  data: CreateUserProfileRequest,
-): Promise<UserProfile> {
-  const response = await apiFetch<CreateProfileResponse>("/users/profile", {
-    method: "POST",
-    authToken: getAuthToken(),
-    json: data,
-  });
   return response.data.profile;
 }
 
@@ -88,44 +58,9 @@ export async function updateProfile(
 ): Promise<UserProfile> {
   const response = await apiFetch<UserProfileResponse>(
     `/users/profile/${walletAddress}`,
-    {
-      method: "PUT",
-      authToken: getAuthToken(),
-      json: data,
-    },
+    { method: "PUT", authToken: getAuthToken(), json: data },
   );
   return response.data.profile;
-}
-
-export async function deleteProfile(walletAddress: string): Promise<void> {
-  await apiFetch(`/users/profile/${walletAddress}`, {
-    method: "DELETE",
-    authToken: getAuthToken(),
-  });
-}
-
-export async function verifyEmail(
-  walletAddress: string,
-  token: string,
-): Promise<UserProfile> {
-  const response = await apiFetch<UserProfileResponse>(
-    `/users/profile/${walletAddress}/verify-email`,
-    {
-      method: "POST",
-      authToken: getAuthToken(),
-      json: { token },
-    },
-  );
-  return response.data.profile;
-}
-
-export async function resendVerificationEmail(
-  walletAddress: string,
-): Promise<void> {
-  await apiFetch(`/users/profile/${walletAddress}/resend-verification`, {
-    method: "POST",
-    authToken: getAuthToken(),
-  });
 }
 
 export async function updatePreferences(
@@ -134,11 +69,7 @@ export async function updatePreferences(
 ): Promise<UserProfile> {
   const response = await apiFetch<UserProfileResponse>(
     `/users/profile/${walletAddress}/preferences`,
-    {
-      method: "PATCH",
-      authToken: getAuthToken(),
-      json: { preferences },
-    },
+    { method: "PATCH", authToken: getAuthToken(), json: { preferences } },
   );
   return response.data.profile;
 }
@@ -147,16 +78,17 @@ export async function uploadAvatar(
   walletAddress: string,
   file: File,
 ): Promise<{ avatarUrl: string }> {
-  const formData = new FormData();
-  formData.append("avatar", file);
+  // Convert file to a data URL for the simple avatar endpoint
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
   const response = await apiFetch<UploadAvatarResponse>(
     `/users/profile/${walletAddress}/avatar`,
-    {
-      method: "POST",
-      authToken: getAuthToken(),
-      body: formData,
-    },
+    { method: "POST", authToken: getAuthToken(), json: { avatarUrl: dataUrl } },
   );
   return response.data;
 }

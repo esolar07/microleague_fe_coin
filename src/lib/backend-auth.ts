@@ -1,6 +1,6 @@
 import { apiFetch } from "@/lib/api";
 
-export type BackendWalletTypeName = "smart" | "base" | "extension";
+export type BackendWalletTypeName = "smart" | "base" | "extension" | "coinbase";
 
 export interface BackendUserProfileData {
   id: number;
