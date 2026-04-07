@@ -9,7 +9,6 @@ export async function apiFetch<T>(
   init?: RequestInit & { json?: unknown; authToken?: string | null },
 ): Promise<T> {
   const url = `${API_BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
-  console.log(url, "url");
 
   const headers = new Headers(init?.headers);
 

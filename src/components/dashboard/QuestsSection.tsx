@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Gamepad2, Users, Share2, ShoppingCart, CheckCircle, Clock,
@@ -140,6 +140,7 @@ const QuestsSection = () => {
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
   const [actionStep, setActionStep] = useState<"detail" | "starting" | "progressing" | "completing" | "claiming" | "done">("detail");
   const [filter, setFilter] = useState<"all" | "available" | "in_progress" | "completed">("all");
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const totalXP = quests.filter(q => q.status === "claimed").reduce((sum, q) => sum + q.xp, 0);
   const level = Math.floor(totalXP / 200) + 1;
@@ -166,11 +167,12 @@ const QuestsSection = () => {
       setActionStep("progressing");
       // Simulate progress
       let prog = 0;
-      const interval = setInterval(() => {
+      progressIntervalRef.current = setInterval(() => {
         prog++;
         updateQuest(selectedQuest.id, { progress: prog });
         if (prog >= selectedQuest.total) {
-          clearInterval(interval);
+          clearInterval(progressIntervalRef.current!);
+          progressIntervalRef.current = null;
           setTimeout(() => {
             updateQuest(selectedQuest.id, { status: "completed", progress: selectedQuest.total });
             setActionStep("completing");

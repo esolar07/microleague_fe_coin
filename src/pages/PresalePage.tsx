@@ -36,7 +36,6 @@ const PresalePage = () => {
   };
 
   const handleWidgetBuy = (amount: number) => {
-    console.log("💰 Purchase amount from widget:", amount);
     setPurchaseAmount(amount);
     if (!isAuthenticated) {
       setShowAuthModal(true);

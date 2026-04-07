@@ -51,8 +51,7 @@ function readStoredAuth():
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [auth, setAuth] = useState(() => readStoredAuth());
-  const { isConnected } = useAccount();
-  // Track previous connection state to detect disconnects
+  const { isConnected, isReconnecting } = useAccount();
   const wasConnected = useRef(isConnected);
 
   const login = useCallback(
@@ -68,13 +67,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  // Auto-logout when wallet disconnects (Coinbase session ends, user disconnects, etc.)
+  // On mount: if there's a stored session but no wallet connected (and wagmi
+  // isn't still reconnecting), the session is orphaned — clear it immediately.
   useEffect(() => {
-    if (wasConnected.current && !isConnected/*  && auth */) {
+    if (isReconnecting) return;
+    if (!isConnected && auth) {
+      logout();
+    }
+  // Only run once after wagmi settles on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReconnecting]);
+
+  // Auto-logout when wallet disconnects mid-session
+  useEffect(() => {
+    if (wasConnected.current && !isConnected) {
       logout();
     }
     wasConnected.current = isConnected;
-  }, [isConnected, auth, logout]);
+  }, [isConnected, logout]);
 
   // Auto-logout when CDP returns 401 — stale/expired session detected on init
   useEffect(() => {

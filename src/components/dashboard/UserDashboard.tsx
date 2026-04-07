@@ -138,8 +138,11 @@ const UserDashboard = () => {
     address,
     token: USDC_ADDRESS,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && USDC_ADDRESS) },
+    query: { enabled: Boolean(address && USDC_ADDRESS), staleTime: 30_000 },
   });
+
+  // Shared query config for presale contract reads — avoids hammering RPC on every render
+  const contractQueryConfig = { staleTime: 30_000, refetchInterval: 60_000 };
 
   // Get current presale stage
   const { data: currentStage } = useReadContract({
@@ -147,7 +150,7 @@ const UserDashboard = () => {
     address: PRESALE_ADDRESS,
     functionName: "currentStage",
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(PRESALE_ADDRESS) },
+    query: { enabled: Boolean(PRESALE_ADDRESS), ...contractQueryConfig },
   });
 
   // Get sale token decimals
@@ -156,7 +159,7 @@ const UserDashboard = () => {
     address: PRESALE_ADDRESS,
     functionName: "saleTokenDecimals",
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(PRESALE_ADDRESS) },
+    query: { enabled: Boolean(PRESALE_ADDRESS), staleTime: Infinity }, // decimals never change
   });
 
   const saleTokenDecimalsNum =
@@ -169,7 +172,7 @@ const UserDashboard = () => {
     functionName: "vestedAmount",
     args: address ? [address] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+    query: { enabled: Boolean(address && PRESALE_ADDRESS), ...contractQueryConfig },
   });
 
   // Get user's total allocated amount (total MLC purchased/assigned)
@@ -179,7 +182,7 @@ const UserDashboard = () => {
     functionName: "totalAllocated",
     args: address ? [address] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+    query: { enabled: Boolean(address && PRESALE_ADDRESS), ...contractQueryConfig },
   });
 
   // Get user's total claimed amount
@@ -189,7 +192,7 @@ const UserDashboard = () => {
     functionName: "totalClaimed",
     args: address ? [address] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+    query: { enabled: Boolean(address && PRESALE_ADDRESS), ...contractQueryConfig },
   });
 
   // Get user's claimable amount (available MLC)
@@ -199,7 +202,7 @@ const UserDashboard = () => {
     functionName: "claimableAmount",
     args: address ? [address] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS) },
+    query: { enabled: Boolean(address && PRESALE_ADDRESS), ...contractQueryConfig },
   });
 
   // Get user's purchases for current stage
@@ -210,7 +213,7 @@ const UserDashboard = () => {
     functionName: "buyerPurchasedForStage",
     args: address && currentStageId !== undefined ? [currentStageId, address] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS && currentStageId !== undefined) },
+    query: { enabled: Boolean(address && PRESALE_ADDRESS && currentStageId !== undefined), ...contractQueryConfig },
   });
 
   // Get token amount purchased for current stage (if contract tracks it)
@@ -220,7 +223,7 @@ const UserDashboard = () => {
     functionName: "buyerPurchased",
     args: address && currentStageId !== undefined ? [currentStageId, address] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS && currentStageId !== undefined) },
+    query: { enabled: Boolean(address && PRESALE_ADDRESS && currentStageId !== undefined), ...contractQueryConfig },
   });
 
   // Calculate real MLC amounts
@@ -247,26 +250,7 @@ const UserDashboard = () => {
   // Locked = allocated minus (already claimed + currently claimable)
   const lockedTokens = Math.max(0, totalAllocatedMLC - totalClaimedMLC - claimableMLC);
 
-  // Debug logging for development
-  console.log("=== MLC DASHBOARD DEBUG ===");
-  console.log("Connected:", isConnected);
-  console.log("Address:", address);
-  console.log("PRESALE_ADDRESS:", PRESALE_ADDRESS);
-  console.log("Current Stage ID:", currentStageId);
-  console.log("Sale Token Decimals (raw):", saleTokenDecimals);
-  console.log("Sale Token Decimals (number):", saleTokenDecimalsNum);
-  console.log("User Total Allocated (raw):", userTotalAllocated?.toString());
-  console.log("User Total Claimed (raw):", userTotalClaimed?.toString());
-  console.log("User Vested Amount (raw):", userVestedAmount?.toString());
-  console.log("User Claimable Amount (raw):", userClaimableAmount?.toString());
-  console.log("User Stage Purchases (raw):", userStagePurchases?.toString());
-  console.log("User Stage Token Purchases (raw):", userStageTokenPurchases?.toString());
-  console.log("Calculated Total Allocated MLC:", totalAllocatedMLC);
-  console.log("Calculated Claimable Tokens:", claimableMLC);
-  console.log("Calculated Total Claimed MLC:", totalClaimedMLC);
-  console.log("Calculated Vested-So-Far MLC:", totalVestedSoFarMLC);
-  console.log("Calculated Locked Tokens:", lockedTokens);
-  console.log("USDC Balance:", usdcBalance);
+
 
   // Real-time stats combining contract data and mock data
   const stats = {
@@ -304,7 +288,6 @@ const UserDashboard = () => {
   };
 
   const handleBuyMoreMLC = (amount: number = 100) => {
-    console.log("🛒 Buy More MLC triggered with amount:", amount);
     setPurchaseAmount(amount);
     setShowPresaleWidget(true);
   };
@@ -316,7 +299,6 @@ const UserDashboard = () => {
   };
 
   const handleWidgetBuy = (amount: number) => {
-    console.log("💰 Purchase amount from widget:", amount);
     setPurchaseAmount(amount);
     setShowPresaleWidget(false);
     setShowBuyModal(true);
