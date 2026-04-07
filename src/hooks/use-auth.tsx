@@ -73,24 +73,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  // Coinbase CDP email/SMS users don't connect via wagmi — their session is
+  // managed by the CDP SDK, so we must not require wagmi isConnected for them.
+  const isCoinbaseSession = auth?.user?.walletType === "coinbase";
+
   // On mount: if there's a stored session but no wallet connected (and wagmi
-  // isn't still reconnecting), the session is orphaned — clear it immediately.
+  // isn't still reconnecting), the session is orphaned — clear it.
+  // Skip this check for Coinbase CDP sessions (they don't use wagmi).
   useEffect(() => {
     if (isReconnecting) return;
-    if (!isConnected && auth) {
+    if (!isConnected && auth && !isCoinbaseSession) {
       logout();
     }
   // Only run once after wagmi settles on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReconnecting]);
 
-  // Auto-logout when wallet disconnects mid-session
+  // Auto-logout when wallet disconnects mid-session.
+  // Skip for Coinbase CDP sessions — they don't use wagmi.
   useEffect(() => {
+    if (isCoinbaseSession) return;
     if (wasConnected.current && !isConnected) {
       logout();
     }
     wasConnected.current = isConnected;
-  }, [isConnected, logout]);
+  }, [isConnected, isCoinbaseSession, logout]);
 
   // Auto-logout when CDP returns 401 — stale/expired session detected on init
   useEffect(() => {

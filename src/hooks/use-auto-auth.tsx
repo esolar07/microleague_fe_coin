@@ -5,9 +5,12 @@ import { authenticateWallet } from "@/services/auth";
 import { APP_CHAIN } from "@/config/network";
 
 /**
- * Runs at app root. On mount (and on wallet connect), if the wallet is
- * connected but there is no backend session, silently sign a message and
- * create the session — no modal required.
+ * Runs at app root. When a wagmi wallet (MetaMask, Coinbase Wallet extension,
+ * WalletConnect, etc.) is connected but has no backend session, silently signs
+ * a message to create one — no modal required.
+ *
+ * CDP email/SMS users are NOT handled here — they go through AuthModal →
+ * handleCoinbaseAuth → cdp-hooks signEvmMessage.
  */
 export function useAutoAuth() {
   const { address, isConnected, connector, isReconnecting } = useAccount();
@@ -20,14 +23,11 @@ export function useAutoAuth() {
   const inProgress = useRef(false);
 
   useEffect(() => {
-    // Wait until wagmi finishes reconnecting on page load
     if (isReconnecting) return;
     if (!isConnected || !address) return;
     if (isAuthenticated) return;
     if (inProgress.current) return;
-    // Stand down if AuthModal is already running a sign flow
     if (manualSignInProgress) return;
-    // Only attempt once per mount/connect cycle
     if (attempted.current) return;
 
     attempted.current = true;
@@ -35,7 +35,6 @@ export function useAutoAuth() {
     (async () => {
       inProgress.current = true;
       try {
-        // Switch chain if needed
         if (chainId !== APP_CHAIN.id) {
           await switchChainAsync({ chainId: APP_CHAIN.id });
         }
@@ -60,10 +59,10 @@ export function useAutoAuth() {
         const connectorName = connector?.name?.toLowerCase() ?? "";
         const connectorId = connector?.id?.toLowerCase() ?? "";
         const walletType =
-          connectorName.includes("coinbase") || connectorId.includes("coinbase")
-            ? "smart"
-            : connectorName.includes("walletconnect") || connectorId.includes("walletconnect")
+          connectorName.includes("walletconnect") || connectorId.includes("walletconnect")
             ? "base"
+            : connectorName.includes("coinbase") || connectorId.includes("coinbase")
+            ? "smart"
             : "extension";
 
         const result = await authenticateWallet({
@@ -76,17 +75,14 @@ export function useAutoAuth() {
 
         login({ token: result.token, user: result.user });
       } catch {
-        // Silent fail — user can manually sign in via the auth modal
         attempted.current = false;
       } finally {
         inProgress.current = false;
       }
     })();
-  // Reset attempt flag when wallet address changes (different account connected)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, address, isAuthenticated, isReconnecting, manualSignInProgress]);
 
-  // Reset when wallet disconnects so next connect triggers a fresh attempt
   useEffect(() => {
     if (!isConnected) {
       attempted.current = false;

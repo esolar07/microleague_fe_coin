@@ -22,7 +22,6 @@ import {
   useEvmAccounts,
   useSignEvmMessage,
   useSignOut,
-  useCreateEvmEoaAccount,
 } from "@coinbase/cdp-hooks";
 import { SignInModal } from "@coinbase/cdp-react/components/SignInModal";
 
@@ -61,7 +60,6 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const { evmAccounts } = useEvmAccounts();
   const { signEvmMessage } = useSignEvmMessage();
   const { signOut: coinbaseSignOut } = useSignOut();
-  const { createEvmEoaAccount } = useCreateEvmEoaAccount();
   const coinbaseAuthInProgress = useRef(false);
   // The ready-to-sign EVM address (only set once account objects are populated)
   const coinbaseEvmAddress = evmAccounts?.[0]?.address ?? null;
@@ -73,6 +71,10 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     if (isOpen) {
       wasSignedInOnOpen.current = isSignedIn;
       setManualSignInProgress(true);
+      // If already signed into CDP with an EVM address, skip SignInModal entirely
+      if (isSignedIn && evmAccounts?.[0]?.address && !isAuthenticated) {
+        handleCoinbaseAuth(evmAccounts[0].address);
+      }
     } else {
       wasSignedInOnOpen.current = false;
       setManualSignInProgress(false);
@@ -161,19 +163,14 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   };
 
   // Handle Coinbase email/SMS sign-in completion
-  const handleCoinbaseAuth = async (walletAddress?: string) => {
+  const handleCoinbaseAuth = async (walletAddress: string) => {
     if (coinbaseAuthInProgress.current) return;
     coinbaseAuthInProgress.current = true;
     try {
       setAuthError(null);
       setStep("coinbase-verify");
 
-      // Ensure an EVM account exists — create one if needed
-      let evmAddr = walletAddress;
-      if (!evmAddr) {
-        evmAddr = await createEvmEoaAccount();
-      }
-
+      const evmAddr = walletAddress;
       const timestamp = Date.now();
       const message = buildSignInMessage(evmAddr, timestamp);
 
@@ -209,17 +206,19 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   };
 
   // Step 1: Detect when Coinbase sign-in completes (isSignedIn becomes true).
-  // Immediately start the auth flow — will create EVM account if needed.
+  // Wait for evmAccounts to populate before proceeding — avoids calling
+  // createEvmEoaAccount() on an existing account (causes "email already linked" error).
   useEffect(() => {
     if (!isSignedIn || !isOpen || isAuthenticated) return;
     if (coinbaseAuthInProgress.current) return;
     if (step === "success" || step === "coinbase-verify") return;
     if (wasSignedInOnOpen.current) return;
+    // Only proceed once we have an EVM address — don't try to create a new account
+    if (!coinbaseEvmAddress) return;
 
-    // Kick off auth — handleCoinbaseAuth will create the account if coinbaseEvmAddress is null
-    handleCoinbaseAuth(coinbaseEvmAddress ?? undefined);
+    handleCoinbaseAuth(coinbaseEvmAddress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSignedIn, isOpen, isAuthenticated]);
+  }, [isSignedIn, isOpen, isAuthenticated, coinbaseEvmAddress]);
 
   // Step 2 is no longer needed since we create the account explicitly in handleCoinbaseAuth
 
@@ -372,10 +371,12 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                   )}
 
                   <div className="space-y-3">
-                    <SignInModal>
+                    {/* If already signed into CDP, skip SignInModal and go straight to wallet signing */}
+                    {isSignedIn && coinbaseEvmAddress ? (
                       <motion.button
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
+                        onClick={() => handleCoinbaseAuth(coinbaseEvmAddress)}
                         className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left"
                       >
                         <div className="flex items-center gap-3">
@@ -397,7 +398,34 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                           </div>
                         </div>
                       </motion.button>
-                    </SignInModal>
+                    ) : (
+                      <SignInModal>
+                        <motion.button
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                          className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl mlc-gradient-bg flex items-center justify-center">
+                              <Mail className="w-5 h-5 text-primary-foreground" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground">
+                                  Continue with Email
+                                </span>
+                                <span className="mlc-badge-primary text-[10px]">
+                                  Recommended
+                                </span>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Sign in with email or phone via Coinbase
+                              </p>
+                            </div>
+                          </div>
+                        </motion.button>
+                      </SignInModal>
+                    )}
 
                     <motion.button
                       whileHover={{ scale: 1.01 }}

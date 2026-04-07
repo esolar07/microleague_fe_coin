@@ -135,10 +135,10 @@ const UserDashboard = () => {
 
   // Get USDC balance
   const { data: usdcBalance } = useBalance({
-    address,
+    address: effectiveAddress,
     token: USDC_ADDRESS,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && USDC_ADDRESS), staleTime: 30_000 },
+    query: { enabled: Boolean(effectiveAddress && USDC_ADDRESS), staleTime: 30_000 },
   });
 
   // Shared query config for presale contract reads — avoids hammering RPC on every render
@@ -159,7 +159,7 @@ const UserDashboard = () => {
     address: PRESALE_ADDRESS,
     functionName: "saleTokenDecimals",
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(PRESALE_ADDRESS), staleTime: Infinity }, // decimals never change
+    query: { enabled: Boolean(PRESALE_ADDRESS), staleTime: Infinity },
   });
 
   const saleTokenDecimalsNum =
@@ -170,9 +170,9 @@ const UserDashboard = () => {
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "vestedAmount",
-    args: address ? [address] : undefined,
+    args: effectiveAddress ? [effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS), ...contractQueryConfig },
+    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS), ...contractQueryConfig },
   });
 
   // Get user's total allocated amount (total MLC purchased/assigned)
@@ -180,9 +180,9 @@ const UserDashboard = () => {
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "totalAllocated",
-    args: address ? [address] : undefined,
+    args: effectiveAddress ? [effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS), ...contractQueryConfig },
+    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS), ...contractQueryConfig },
   });
 
   // Get user's total claimed amount
@@ -190,9 +190,9 @@ const UserDashboard = () => {
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "totalClaimed",
-    args: address ? [address] : undefined,
+    args: effectiveAddress ? [effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS), ...contractQueryConfig },
+    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS), ...contractQueryConfig },
   });
 
   // Get user's claimable amount (available MLC)
@@ -200,9 +200,9 @@ const UserDashboard = () => {
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "claimableAmount",
-    args: address ? [address] : undefined,
+    args: effectiveAddress ? [effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS), ...contractQueryConfig },
+    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS), ...contractQueryConfig },
   });
 
   // Get user's purchases for current stage
@@ -211,9 +211,9 @@ const UserDashboard = () => {
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "buyerPurchasedForStage",
-    args: address && currentStageId !== undefined ? [currentStageId, address] : undefined,
+    args: effectiveAddress && currentStageId !== undefined ? [currentStageId, effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS && currentStageId !== undefined), ...contractQueryConfig },
+    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS && currentStageId !== undefined), ...contractQueryConfig },
   });
 
   // Get token amount purchased for current stage (if contract tracks it)
@@ -221,9 +221,9 @@ const UserDashboard = () => {
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "buyerPurchased",
-    args: address && currentStageId !== undefined ? [currentStageId, address] : undefined,
+    args: effectiveAddress && currentStageId !== undefined ? [currentStageId, effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS && currentStageId !== undefined), ...contractQueryConfig },
+    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS && currentStageId !== undefined), ...contractQueryConfig },
   });
 
   // Calculate real MLC amounts
@@ -433,8 +433,8 @@ const UserDashboard = () => {
 
       {/* Content */}
       <div className="mlc-container py-8">
-        {/* Connection Status Banner */}
-        {!isConnected && (
+        {/* Connection Status Banner — hide for Coinbase CDP email users (no wagmi connection) */}
+        {!isConnected && !(isAuthenticated && user?.walletType === "coinbase") && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -504,12 +504,12 @@ const UserDashboard = () => {
                   <Coins className="w-4 h-4 text-primary" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">
-                  {!isConnected ? "—" :
+                  {!isWalletReady ? "—" :
                     userVestedAmount === undefined ? "Loading..." :
                       stats.totalMLC.toLocaleString()}
                 </p>
                 <p className="text-xs text-success mt-1">
-                  {!isConnected ? "Connect wallet" :
+                  {!isWalletReady ? "Connect wallet" :
                     userVestedAmount === undefined ? "Fetching data..." :
                       "+5.2% value"}
                 </p>
@@ -520,12 +520,12 @@ const UserDashboard = () => {
                   <Shield className="w-4 h-4 text-warning" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">
-                  {!isConnected ? "—" :
+                  {!isWalletReady ? "—" :
                     userVestedAmount === undefined ? "Loading..." :
                       stats.lockedTokens.toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {!isConnected ? "Connect wallet" :
+                  {!isWalletReady ? "Connect wallet" :
                     userVestedAmount === undefined ? "Fetching data..." :
                       "Presale"}
                 </p>
@@ -536,12 +536,12 @@ const UserDashboard = () => {
                   <Wallet className="w-4 h-4 text-success" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">
-                  {!isConnected ? "—" :
+                  {!isWalletReady ? "—" :
                     usdcBalance === undefined ? "Loading..." :
                       `${stats.usdcBalance.toFixed(2)}`}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {!isConnected ? "Connect wallet" :
+                  {!isWalletReady ? "Connect wallet" :
                     usdcBalance === undefined ? "Fetching data..." :
                       "Available"}
                 </p>
@@ -659,7 +659,7 @@ const UserDashboard = () => {
                 <button className="text-sm text-primary hover:underline">View all</button>
               </div>
               <div className="space-y-0">
-                {!isConnected ? (
+                {!isWalletReady ? (
                   <div className="flex items-center justify-center py-8 text-muted-foreground">
                     <Wallet className="w-5 h-5 mr-2" />
                     <span>Connect your wallet to view activity</span>
@@ -706,8 +706,8 @@ const UserDashboard = () => {
         {/* Tokens Tab */}
         {activeTab === "tokens" && (
           <MyTokensTab
-            address={address}
-            isConnected={isConnected}
+            address={effectiveAddress}
+            isConnected={isWalletReady}
             isOnCorrectChain={isOnCorrectChain}
             saleTokenDecimals={saleTokenDecimalsNum}
             userTotalAllocated={userTotalAllocated}
@@ -719,8 +719,8 @@ const UserDashboard = () => {
         {/* Vesting Tab */}
         {activeTab === "vesting" && (
           <VestingTab
-            address={address}
-            isConnected={isConnected}
+            address={effectiveAddress}
+            isConnected={isWalletReady}
             isOnCorrectChain={isOnCorrectChain}
             saleTokenDecimals={saleTokenDecimalsNum}
           />

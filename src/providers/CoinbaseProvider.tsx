@@ -5,7 +5,7 @@ import { COINBASE_PROJECT_ID } from '@/config/onramp';
 import { createCDPEmbeddedWalletConnector } from '@coinbase/cdp-wagmi';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { baseSepolia, base, sepolia } from 'viem/chains';
-import { WagmiProvider, createConfig, http } from 'wagmi';
+import { WagmiProvider, createConfig, http, injected } from 'wagmi';
 
 // Your CDP config
 const cdpConfig: Config = {
@@ -17,6 +17,7 @@ const cdpConfig: Config = {
     appLogoUrl: "",
     authMethods: ["email", "sms"],
     showCoinbaseFooter: true,
+
 }
 
 export const connector = createCDPEmbeddedWalletConnector({
