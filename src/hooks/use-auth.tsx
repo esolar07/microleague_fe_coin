@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import type { BackendAuthenticatedUser } from "@/lib/backend-auth";
 import { useAccount } from "wagmi";
+import { getCurrentUser } from "@/services/auth";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -59,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [manualSignInProgress, setManualSignInProgress] = useState(false);
   const { isConnected, isReconnecting } = useAccount();
   const wasConnected = useRef(isConnected);
+  const hasHandledStoredSession = useRef(false);
 
   const login = useCallback(
     (params: { token: string; user: BackendAuthenticatedUser }) => {
@@ -73,18 +75,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  const refreshToken = useCallback(async () => {
+    const stored = readStoredAuth();
+    if (!stored?.token) return false;
+    try {
+      const user = await getCurrentUser({ token: stored.token });
+      // If refresh succeeds, update the stored auth with fresh user data
+      const updatedAuth = { ...stored, user: user as BackendAuthenticatedUser };
+      setAuth(updatedAuth);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedAuth));
+      return true;
+    } catch (error) {
+      // If refresh fails (401), the token is invalid
+      return false;
+    }
+  }, []);
+
   // Coinbase CDP email/SMS users don't connect via wagmi — their session is
   // managed by the CDP SDK, so we must not require wagmi isConnected for them.
   const isCoinbaseSession = auth?.user?.walletType === "coinbase";
 
   // On mount: if there's a stored session but no wallet connected (and wagmi
-  // isn't still reconnecting), the session is orphaned — clear it.
+  // isn't still reconnecting), try to refresh the token for RainbowKit wallets,
+  // or clear the session if refresh fails.
   // Skip this check for Coinbase CDP sessions (they don't use wagmi).
   useEffect(() => {
     if (isReconnecting) return;
-    if (!isConnected && auth && !isCoinbaseSession) {
-      logout();
-    }
+    if (hasHandledStoredSession.current) return;
+    hasHandledStoredSession.current = true;
+    
+    const handleStoredSession = async () => {
+      if (!auth) return;
+      
+      if (isCoinbaseSession) {
+        // Coinbase handles its own session persistence
+        return;
+      }
+      
+      if (isConnected) {
+        // Wallet is connected, session should be valid
+        return;
+      }
+      
+      // For RainbowKit wallets, try to refresh the token
+      const refreshed = await refreshToken();
+      if (!refreshed) {
+        // Token refresh failed, clear the session
+        logout();
+      }
+    };
+    
+    handleStoredSession();
   // Only run once after wagmi settles on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReconnecting]);

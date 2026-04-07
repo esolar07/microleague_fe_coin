@@ -12,14 +12,14 @@ export const chains = [APP_CHAIN] as const;
 
 export const wagmiConfig = walletConnectProjectId
   ? getDefaultConfig({
-    appName: "MicroLeague",
-    projectId: walletConnectProjectId,
-    chains,
-  })
+      appName: "MicroLeague",
+      projectId: walletConnectProjectId,
+      chains,
+    })
   : createConfig({
-    connectors: [connector],
-    chains: [sepolia],
-    transports: {
-      [sepolia.id]: http(),
-    },
-  });
+      connectors: [connector],
+      chains: [sepolia],
+      transports: {
+        [sepolia.id]: http(),
+      },
+    });
