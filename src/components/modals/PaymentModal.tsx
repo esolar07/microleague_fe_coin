@@ -27,6 +27,7 @@ import { formatUnits, parseUnits } from "viem";
 import { APP_CHAIN } from "@/config/network";
 import { SAFTService } from "@/services/saft";
 import { submitBankTransfer } from "@/services/bankTransfer";
+import { useAuth } from "@/hooks/use-auth";
 import {
   PAYMENT_TOKEN_DECIMALS,
   PRESALE_ADDRESS,
@@ -104,6 +105,7 @@ const PaymentModal = ({
 
   const { openConnectModal } = useConnectModal();
   const { address, isConnected } = useAccount();
+  const { user } = useAuth();
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
 
@@ -1365,8 +1367,12 @@ const PaymentModal = ({
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Purchaser</span>
-                        <span className="font-medium text-foreground">
-                          user@example.com
+                        <span className="font-medium text-foreground font-mono text-xs">
+                          {user?.profile?.email
+                            ? user.profile.email
+                            : address
+                              ? `${address.slice(0, 8)}...${address.slice(-6)}`
+                              : "—"}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -1396,7 +1402,7 @@ const PaymentModal = ({
                           Price per Token
                         </span>
                         <span className="font-medium text-foreground">
-                          $0.01
+                          ${displayMlc > 0 ? (numericAmount / displayMlc).toFixed(4) : "—"}
                         </span>
                       </div>
                       <div className="flex justify-between">
