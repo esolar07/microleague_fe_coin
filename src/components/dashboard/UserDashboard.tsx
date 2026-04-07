@@ -34,7 +34,8 @@ import { PRESALE_ADDRESS, USDC_ADDRESS } from "@/config/presale";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 import { useAuth } from "@/hooks/use-auth";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
-import { getRecentActivity, type ActivityRecord } from "@/services/activity";
+import type { ActivityRecord } from "@/services/activity";
+import { useActivity } from "@/hooks/use-activity";
 import { useLinkEmail, useSignOut } from "@coinbase/cdp-hooks";
 
 const tabs: { id: string; label: string; icon: React.ElementType; badge?: string }[] = [
@@ -107,11 +108,6 @@ const UserDashboard = () => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">("details");
 
-  // Activity feed state
-  const [activityData, setActivityData] = useState<ActivityRecord[]>([]);
-  const [activityLoading, setActivityLoading] = useState(false);
-  const [activityError, setActivityError] = useState<string | null>(null);
-
   // Wallet connection and auth
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
@@ -129,31 +125,13 @@ const UserDashboard = () => {
   const isWalletReady = isConnected || (isAuthenticated && !!effectiveAddress);
   const isOnCorrectChain = !isConnected || chainId === APP_CHAIN.id;
 
+  // Activity feed via React Query
+  const { data: activityPage, isLoading: activityLoading, isError: activityError } = useActivity(effectiveAddress);
+
   // Bank transfers — fetched via react-query
   const { data: bankTransferData = [], isLoading: bankTransferLoading } = useBankTransfers(effectiveAddress);
 
-  // Fetch recent activity when wallet is connected
-  useEffect(() => {
-    if (!effectiveAddress) {
-      setActivityData([]);
-      setActivityError(null);
-      return;
-    }
-    let cancelled = false;
-    setActivityLoading(true);
-    setActivityError(null);
-    getRecentActivity(effectiveAddress)
-      .then((res) => {
-        if (!cancelled) setActivityData(res.data);
-      })
-      .catch(() => {
-        if (!cancelled) setActivityError("Failed to load recent activity");
-      })
-      .finally(() => {
-        if (!cancelled) setActivityLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [effectiveAddress]);
+  
 
   // Get USDC balance
   const { data: usdcBalance } = useBalance({
@@ -709,14 +687,14 @@ const UserDashboard = () => {
                   </div>
                 ) : activityError ? (
                   <div className="flex items-center justify-center py-8 text-destructive">
-                    <span>{activityError}</span>
+                    <span>Failed to load recent activity</span>
                   </div>
-                ) : activityData.length === 0 ? (
+                ) : (activityPage?.data ?? []).length === 0 ? (
                   <div className="flex items-center justify-center py-8 text-muted-foreground">
                     <span>No recent activity</span>
                   </div>
                 ) : (
-                  activityData.map((activity) => {
+                  (activityPage?.data ?? []).map((activity) => {
                     const mapping = ACTIVITY_ICON_MAP[activity.activityType];
                     const IconComponent = mapping.icon;
                     return (

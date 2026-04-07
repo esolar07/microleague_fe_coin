@@ -1,5 +1,5 @@
 // Feature: dashboard-tokens-vesting
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useReadContract, useWriteContract, useReadContracts } from "wagmi";
 import { formatUnits } from "viem";
 import { motion } from "framer-motion";
@@ -11,14 +11,8 @@ import { APP_CHAIN } from "@/config/network";
 import { PRESALE_ADDRESS } from "@/config/presale";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
-import {
-  getVestingSchedules,
-  getVestingSummary,
-  getClaimTransactions,
-  VestingScheduleRecord,
-  VestingSummary,
-  TransactionPage,
-} from "@/services/tokens";
+import { useVestingSchedules, useVestingSummary, useClaimTransactions, tokenKeys } from "@/hooks/use-tokens";
+import { useQueryClient } from "@tanstack/react-query";
 import VestingClaimModal from "./VestingClaimModal";
 import { formatBlockchainError } from "@/utils/formatError";
 
@@ -94,50 +88,31 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
   const [claimableForModal, setClaimableForModal] = useState(0);
 
   // ── Backend API state ──
-  const [apiSchedules, setApiSchedules] = useState<VestingScheduleRecord[] | null>(null);
-  const [apiSummary, setApiSummary] = useState<VestingSummary | null>(null);
-  const [apiLoading, setApiLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const {
+    data: apiSchedules,
+    isLoading: apiLoading,
+    isError: apiErrorBool,
+    error: apiErrorObj,
+    refetch: refetchApiSchedules,
+  } = useVestingSchedules(address);
+  const { data: apiSummary, refetch: refetchApiSummary } = useVestingSummary(address);
+  const apiError = apiErrorBool ? (apiErrorObj instanceof Error ? apiErrorObj.message : "Failed to load vesting data") : null;
+
+  const fetchApiData = () => {
+    refetchApiSchedules();
+    refetchApiSummary();
+  };
 
   // ── Claim history state ──
   const [claimPage, setClaimPage] = useState(1);
-  const [claimData, setClaimData] = useState<TransactionPage | null>(null);
-  const [claimLoading, setClaimLoading] = useState(false);
-  const [claimError, setClaimError] = useState<string | null>(null);
-
-  // ── Fetch backend data ──
-  const fetchApiData = () => {
-    if (!address) return;
-    setApiLoading(true);
-    setApiError(null);
-    Promise.all([
-      getVestingSchedules(address),
-      getVestingSummary(address),
-    ])
-      .then(([schedules, summary]) => {
-        setApiSchedules(schedules);
-        setApiSummary(summary);
-      })
-      .catch((err: unknown) => {
-        setApiError(err instanceof Error ? err.message : "Failed to load vesting data");
-      })
-      .finally(() => setApiLoading(false));
-  };
-
-  useEffect(() => { fetchApiData(); }, [address]);
-
-  // ── Fetch claim history ──
-  useEffect(() => {
-    if (!address) return;
-    let cancelled = false;
-    setClaimLoading(true);
-    setClaimError(null);
-    getClaimTransactions(address, claimPage, 10)
-      .then((r) => { if (!cancelled) setClaimData(r); })
-      .catch((err: unknown) => { if (!cancelled) setClaimError(err instanceof Error ? err.message : "Failed to load claim history"); })
-      .finally(() => { if (!cancelled) setClaimLoading(false); });
-    return () => { cancelled = true; };
-  }, [address, claimPage]);
+  const {
+    data: claimData,
+    isLoading: claimLoading,
+    isError: claimErrorBool,
+    error: claimErrorObj,
+  } = useClaimTransactions(address, claimPage, 10);
+  const claimError = claimErrorBool ? (claimErrorObj instanceof Error ? claimErrorObj.message : "Failed to load claim history") : null;
 
   // ── Contract: claimEnabled ──
   const { data: claimEnabledRaw } = useReadContract({
@@ -221,8 +196,9 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
     refetchClaimed();
     contractScheduleReads.refetch();
     fetchApiData();
-    setClaimPage(1);
-    // Don't null claimData — the useEffect will replace it when claimPage changes
+    if (address) {
+      queryClient.invalidateQueries({ queryKey: tokenKeys.claims(address, claimPage, 10) });
+    }
   };
 
   const handleClaimClick = () => {
@@ -261,9 +237,11 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
       contractScheduleReads.refetch();
       // Refetch backend API data after a delay (listener needs time to process the event)
       setTimeout(() => {
-        fetchApiData();
-        setClaimPage(1);
-        // Don't null claimData here — let the useEffect re-fetch replace it naturally
+        if (address) {
+          queryClient.invalidateQueries({ queryKey: tokenKeys.vestingSchedules(address) });
+          queryClient.invalidateQueries({ queryKey: tokenKeys.vestingSummary(address) });
+          queryClient.invalidateQueries({ queryKey: tokenKeys.claims(address, claimPage, 10) });
+        }
       }, 3000);
       // Refetch again after more time for the listener to fully process
       setTimeout(() => {
@@ -271,8 +249,11 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
         refetchAllocated();
         refetchClaimed();
         contractScheduleReads.refetch();
-        fetchApiData();
-        setClaimPage(1);
+        if (address) {
+          queryClient.invalidateQueries({ queryKey: tokenKeys.vestingSchedules(address) });
+          queryClient.invalidateQueries({ queryKey: tokenKeys.vestingSummary(address) });
+          queryClient.invalidateQueries({ queryKey: tokenKeys.claims(address, claimPage, 10) });
+        }
       }, 8000);
     } catch (err: unknown) {
       // console.log(err,'err');
@@ -611,7 +592,7 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
           <div className="flex items-center justify-between gap-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3">
             <p className="text-sm text-red-400">{claimError}</p>
             <button className="mlc-btn-secondary text-sm px-3 py-1.5 flex items-center gap-1"
-              onClick={() => { setClaimError(null); setClaimPage((p) => p); }}>
+              onClick={() => setClaimPage((p) => p)}>
               <RefreshCw className="w-3.5 h-3.5" /> Retry
             </button>
           </div>

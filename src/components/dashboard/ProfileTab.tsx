@@ -1,82 +1,53 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  User, Wallet, Shield, Save, Loader2,
+  User, Wallet, Save, Loader2,
   CheckCircle, AlertCircle, Camera, Calendar, Copy, Check,
 } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  getProfile,
-  updateProfile,
-  updatePreferences,
   uploadAvatar,
   type UserProfile,
 } from "@/services/userProfile";
+import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
 import { useCurrentUser } from "@coinbase/cdp-hooks";
 
 const ProfileTab = () => {
   const { address } = useAccount();
   const { user } = useAuth();
-  const { currentUser } = useCurrentUser()
+  const { currentUser } = useCurrentUser();
 
-  // Profile data
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Avatar + copy state
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Form state
   const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState(currentUser?.authenticationMethods?.email?.email ? currentUser?.authenticationMethods?.email?.email : "");
+  const [email, setEmail] = useState(currentUser?.authenticationMethods?.email?.email ?? "");
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
 
-  // Preferences
-  const [notifications, setNotifications] = useState(false);
-  const [newsletter, setNewsletter] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(false);
-  const [savingPrefs, setSavingPrefs] = useState(false);
-
-  // Avatar
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  // Copy wallet
-  const [copied, setCopied] = useState(false);
-
   const walletAddress = address ?? user?.walletAddress ?? "";
 
-  // Fetch profile on mount
-  const fetchProfile = useCallback(async () => {
-    if (!walletAddress) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getProfile(walletAddress);
-      setProfile(data);
-      setDisplayName(data.displayName ?? "");
-      setEmail(data.email ?? "");
-      setBio(data.bio ?? "");
-      setNotifications(data.preferences?.notifications ?? false);
-      setNewsletter(data.preferences?.newsletter ?? false);
-      setTwoFactor(data.preferences?.twoFactor ?? false);
-    } catch {
-      // Profile may not exist yet — that's fine, use auth data as fallback
-      setProfile(null);
-      if (user?.profile) {
-        setDisplayName(
-          [user.profile.firstName, user.profile.lastName].filter(Boolean).join(" ") || ""
-        );
-        setEmail(user.profile.email ?? "");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [walletAddress, user]);
+  // Fetch profile via React Query
+  const { data: profile, isLoading: loading } = useUserProfile(walletAddress || undefined);
+  const updateProfileMutation = useUpdateUserProfile(walletAddress);
 
+  // Sync form when profile loads
   useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    if (profile) {
+      setDisplayName(profile.displayName ?? "");
+      setEmail(profile.email ?? "");
+      setBio(profile.bio ?? "");
+    } else if (user?.profile) {
+      setDisplayName(
+        [user.profile.firstName, user.profile.lastName].filter(Boolean).join(" ") || ""
+      );
+      setEmail(user.profile.email ?? "");
+    }
+  }, [profile, user]);
 
   // Save profile changes
   const handleSaveProfile = async () => {
@@ -84,13 +55,11 @@ const ProfileTab = () => {
     setSaving(true);
     setSaveStatus("idle");
     try {
-      const payload = {
+      await updateProfileMutation.mutateAsync({
         displayName: displayName.trim(),
         email: email.trim(),
         bio: bio.trim(),
-      };
-      const updated = await updateProfile(walletAddress, payload);
-      setProfile(updated);
+      });
       setSaveStatus("success");
       setTimeout(() => setSaveStatus("idle"), 3000);
     } catch {
@@ -101,32 +70,13 @@ const ProfileTab = () => {
     }
   };
 
-  // Save preferences
-  const handleSavePreferences = async () => {
-    if (!walletAddress) return;
-    setSavingPrefs(true);
-    try {
-      const updated = await updatePreferences(walletAddress, {
-        notifications,
-        newsletter,
-        twoFactor,
-      });
-      setProfile(updated);
-    } catch {
-      // silently fail — toggle will revert on next fetch
-    } finally {
-      setSavingPrefs(false);
-    }
-  };
-
   // Avatar upload
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !walletAddress) return;
     setUploadingAvatar(true);
     try {
-      const { avatarUrl } = await uploadAvatar(walletAddress, file);
-      setProfile((prev) => (prev ? { ...prev, avatar: avatarUrl } : prev));
+      await uploadAvatar(walletAddress, file);
     } catch {
       // ignore
     } finally {
