@@ -8,6 +8,9 @@ interface AuthContextType {
   user: BackendAuthenticatedUser | null;
   login: (params: { token: string; user: BackendAuthenticatedUser }) => void;
   logout: () => void;
+  /** Set to true while AuthModal is actively running a sign flow — prevents useAutoAuth from racing */
+  setManualSignInProgress: (v: boolean) => void;
+  manualSignInProgress: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,6 +19,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   login: () => {},
   logout: () => {},
+  setManualSignInProgress: () => {},
+  manualSignInProgress: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -51,6 +56,7 @@ function readStoredAuth():
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [auth, setAuth] = useState(() => readStoredAuth());
+  const [manualSignInProgress, setManualSignInProgress] = useState(false);
   const { isConnected, isReconnecting } = useAccount();
   const wasConnected = useRef(isConnected);
 
@@ -104,7 +110,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = Boolean(token);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, token, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, token, user, login, logout, setManualSignInProgress, manualSignInProgress }}>
       {children}
     </AuthContext.Provider>
   );

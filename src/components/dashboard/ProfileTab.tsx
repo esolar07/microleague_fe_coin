@@ -2,21 +2,27 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   User, Wallet, Save, Loader2,
-  CheckCircle, AlertCircle, Camera, Calendar, Copy, Check,
+  CheckCircle, AlertCircle, Camera, Calendar, Copy, Check, LogOut,
 } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useAuth } from "@/hooks/use-auth";
+import { useDisconnect } from "wagmi";
+import { useSignOut } from "@coinbase/cdp-hooks";
+import { useNavigate } from "react-router-dom";
 import {
   uploadAvatar,
-  type UserProfile,
 } from "@/services/userProfile";
 import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
 import { useCurrentUser } from "@coinbase/cdp-hooks";
 
 const ProfileTab = () => {
   const { address } = useAccount();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { currentUser } = useCurrentUser();
+  const { disconnect } = useDisconnect();
+  const { signOut } = useSignOut();
+  const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   // Avatar + copy state
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -89,6 +95,18 @@ const ProfileTab = () => {
     navigator.clipboard.writeText(walletAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await signOut();
+    } catch {
+      // silent — session may already be expired
+    }
+    logout();
+    disconnect();
+    navigate("/");
   };
 
   const truncatedWallet = walletAddress
@@ -271,6 +289,30 @@ const ProfileTab = () => {
             Wallet type: <span className="capitalize">{user.walletType}</span>
           </p>
         )}
+      </div>
+
+      {/* Logout */}
+      <div className="mlc-card-elevated">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-foreground">Sign Out</p>
+            <p className="text-sm text-muted-foreground">Disconnect your wallet and clear your session</p>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors text-sm font-medium disabled:opacity-60"
+          >
+            {loggingOut ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <LogOut className="w-4 h-4" />
+            )}
+            {loggingOut ? "Signing out..." : "Logout & Disconnect"}
+          </motion.button>
+        </div>
       </div>
 
       {/* Security & Preferences */}

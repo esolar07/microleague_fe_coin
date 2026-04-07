@@ -14,7 +14,7 @@ export function useAutoAuth() {
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
   const { switchChainAsync } = useSwitchChain();
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, manualSignInProgress } = useAuth();
 
   const attempted = useRef(false);
   const inProgress = useRef(false);
@@ -25,6 +25,8 @@ export function useAutoAuth() {
     if (!isConnected || !address) return;
     if (isAuthenticated) return;
     if (inProgress.current) return;
+    // Stand down if AuthModal is already running a sign flow
+    if (manualSignInProgress) return;
     // Only attempt once per mount/connect cycle
     if (attempted.current) return;
 
@@ -82,7 +84,7 @@ export function useAutoAuth() {
     })();
   // Reset attempt flag when wallet address changes (different account connected)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, address, isAuthenticated, isReconnecting]);
+  }, [isConnected, address, isAuthenticated, isReconnecting, manualSignInProgress]);
 
   // Reset when wallet disconnects so next connect triggers a fresh attempt
   useEffect(() => {

@@ -48,7 +48,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, setManualSignInProgress } = useAuth();
   const { openConnectModal } = useConnectModal();
   const { address, isConnected, connector } = useAccount();
   const chainId = useChainId();
@@ -72,8 +72,10 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   useEffect(() => {
     if (isOpen) {
       wasSignedInOnOpen.current = isSignedIn;
+      setManualSignInProgress(true);
     } else {
       wasSignedInOnOpen.current = false;
+      setManualSignInProgress(false);
     }
     // Only run when isOpen changes, NOT when isSignedIn changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -256,6 +258,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     setAuthError(null);
     setAutoSwitchAttempted(false);
     autoSignAttempted.current = false;
+    setManualSignInProgress(false);
     onClose();
   };
 
@@ -266,6 +269,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     setAuthError(null);
     setAutoSwitchAttempted(false);
     autoSignAttempted.current = false;
+    setManualSignInProgress(false);
     onSuccess();
   };
 

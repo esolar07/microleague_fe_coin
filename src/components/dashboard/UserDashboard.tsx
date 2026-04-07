@@ -370,7 +370,7 @@ const UserDashboard = () => {
                 <p className="text-sm text-muted-foreground">Welcome back, User</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -380,24 +380,25 @@ const UserDashboard = () => {
                 Buy More MLC
               </motion.button>
 
-              {/* Wallet Status Indicator */}
-              {isConnected && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 border border-success/20">
-                  <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
-                  <span className="text-xs text-success font-medium">
-                    {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connected"}
-                  </span>
-                </div>
-              )}
-
+              {/* Avatar — opens Profile tab */}
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleLogoutAndDisconnect}
-                className="mlc-btn-secondary text-sm px-4 py-2 flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveTab("profile")}
+                className="relative w-10 h-10 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center overflow-hidden hover:border-primary transition-colors"
+                aria-label="Open profile"
               >
-                <X className="w-4 h-4" />
-                {isConnected || isAuthenticated ? "Logout & Disconnect" : "Connect Wallet"}
+                <span className="text-sm font-bold text-primary">
+                  {user?.profile?.firstName
+                    ? user.profile.firstName[0].toUpperCase()
+                    : address
+                    ? address.slice(2, 4).toUpperCase()
+                    : "?"}
+                </span>
+                {/* Online dot */}
+                {(isConnected || isAuthenticated) && (
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-success border-2 border-card" />
+                )}
               </motion.button>
             </div>
           </div>
