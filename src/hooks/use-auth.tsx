@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  ReactNode,
+} from "react";
 import type { BackendAuthenticatedUser } from "@/lib/backend-auth";
 import { useAccount } from "wagmi";
 import { getCurrentUser } from "@/services/auth";
@@ -28,9 +36,10 @@ export const useAuth = () => useContext(AuthContext);
 
 const STORAGE_KEY = "mlc-auth";
 
-function readStoredAuth():
-  | { token: string; user: BackendAuthenticatedUser }
-  | null {
+function readStoredAuth(): {
+  token: string;
+  user: BackendAuthenticatedUser;
+} | null {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw || raw === "true") return null;
   try {
@@ -67,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAuth(params);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(params));
     },
-    []
+    [],
   );
 
   const logout = useCallback(() => {
@@ -103,20 +112,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (isReconnecting) return;
     if (hasHandledStoredSession.current) return;
     hasHandledStoredSession.current = true;
-    
+
     const handleStoredSession = async () => {
       if (!auth) return;
-      
+
       if (isCoinbaseSession) {
         // Coinbase handles its own session persistence
         return;
       }
-      
+
       if (isConnected) {
         // Wallet is connected, session should be valid
         return;
       }
-      
+
       // For RainbowKit wallets, try to refresh the token
       const refreshed = await refreshToken();
       if (!refreshed) {
@@ -124,10 +133,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logout();
       }
     };
-    
+
     handleStoredSession();
-  // Only run once after wagmi settles on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only run once after wagmi settles on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isReconnecting]);
 
   // Auto-logout when wallet disconnects mid-session.
@@ -143,7 +152,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Auto-logout when CDP returns 401 — stale/expired session detected on init
   useEffect(() => {
     const handler = (event: PromiseRejectionEvent) => {
-      const msg = event.reason instanceof Error ? event.reason.message : String(event.reason ?? "");
+      const msg =
+        event.reason instanceof Error
+          ? event.reason.message
+          : String(event.reason ?? "");
       if (msg.includes("401") || msg.includes("Unauthorized")) {
         event.preventDefault();
         if (auth) logout();
@@ -158,7 +170,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAuthenticated = Boolean(token);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, token, user, login, logout, setManualSignInProgress, manualSignInProgress }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        token,
+        user,
+        login,
+        logout,
+        setManualSignInProgress,
+        manualSignInProgress,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
