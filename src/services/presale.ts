@@ -16,7 +16,12 @@ export async function approveErc20(params: {
     args: [params.spender, params.amount],
     gas: 100000n, // Set reasonable gas limit for ERC20 approval
   });
-  await waitForTransactionReceipt(wagmiConfig, { hash });
+  await waitForTransactionReceipt(wagmiConfig, {
+    hash,
+    confirmations: 1,
+    pollingInterval: 4_000,
+    timeout: 120_000, // 2 minutes — Sepolia can be slow
+  });
   return hash;
 }
 
@@ -36,7 +41,12 @@ export async function buyWithToken(params: {
 
   // @ts-ignore - Wagmi v2 type inference creates complex unions for request that writeContract rejects broadly
   const hash = await writeContract(wagmiConfig, request);
-  await waitForTransactionReceipt(wagmiConfig, { hash });
+  await waitForTransactionReceipt(wagmiConfig, {
+    hash,
+    confirmations: 1,
+    pollingInterval: 4_000,
+    timeout: 120_000, // 2 minutes — Sepolia can be slow
+  });
   return hash;
 }
 

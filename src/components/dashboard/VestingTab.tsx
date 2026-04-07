@@ -20,6 +20,7 @@ import {
   TransactionPage,
 } from "@/services/tokens";
 import VestingClaimModal from "./VestingClaimModal";
+import { formatBlockchainError } from "@/utils/formatError";
 
 interface VestingTabProps {
   address: string | undefined;
@@ -221,7 +222,7 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
     contractScheduleReads.refetch();
     fetchApiData();
     setClaimPage(1);
-    setClaimData(null);
+    // Don't null claimData — the useEffect will replace it when claimPage changes
   };
 
   const handleClaimClick = () => {
@@ -253,16 +254,37 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
         account: address as `0x${string}`,
       });
       setModalStep("done");
-      refetchAll();
+      // Refetch contract data immediately (on-chain state is already updated)
+      refetchCanClaim();
+      refetchAllocated();
+      refetchClaimed();
+      contractScheduleReads.refetch();
+      // Refetch backend API data after a delay (listener needs time to process the event)
+      setTimeout(() => {
+        fetchApiData();
+        setClaimPage(1);
+        // Don't null claimData here — let the useEffect re-fetch replace it naturally
+      }, 3000);
+      // Refetch again after more time for the listener to fully process
+      setTimeout(() => {
+        refetchCanClaim();
+        refetchAllocated();
+        refetchClaimed();
+        contractScheduleReads.refetch();
+        fetchApiData();
+        setClaimPage(1);
+      }, 8000);
     } catch (err: unknown) {
-      const raw = err instanceof Error ? err.message : "Transaction failed";
-      let msg = "Transaction failed. Please try again.";
-      if (/user rejected|user denied/i.test(raw)) {
-        msg = "Transaction was rejected.";
-      } else if (/insufficient funds/i.test(raw)) {
-        msg = "Insufficient funds for this transaction.";
-      }
-      setModalError(msg);
+      // console.log(err,'err');
+      // formatBlockchainError(err)
+      // const raw = err instanceof Error ? err.message : "Transaction failed";
+      // let msg = "Transaction failed. Please try again.";
+      // if (/user rejected|user denied/i.test(raw)) {
+      //   msg = "Transaction was rejected.";
+      // } else if (/insufficient funds|insufficient balance/i.test(raw)) {
+      //   msg = "Insufficient ETH balance to pay for gas. Please add ETH to your wallet and try again.";
+      // }
+      setModalError(formatBlockchainError(err));
       setModalStep("confirm");
     }
   };
@@ -453,6 +475,9 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
                 const isClaimed = liveClaimed >= s.totalAmount - 0.0001;
                 const isClaimable = !isLocked && !isClaimed && (liveClaimableSchedule ?? 0) > 0 && canClaim;
                 const days = daysUntil(cliffEnd);
+                const displayAmount = isClaimable && liveClaimableSchedule !== null
+                  ? liveClaimableSchedule
+                  : s.totalAmount;
                 return (
                   <div className={`flex items-center justify-between px-5 py-3.5 ${isClaimable ? "bg-success/5" : ""}`}>
                     <div className="flex items-center gap-3">
@@ -466,7 +491,7 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-semibold text-foreground">
-                        {s.totalAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} MLC
+                        {displayAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} MLC
                       </span>
                       {isClaimable ? (
                         <button onClick={handleClaimClick} className="mlc-btn-primary text-xs px-3 py-1.5 flex items-center gap-1">
@@ -490,6 +515,10 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
                 const isClaimed = groupClaimed >= g.amount - 0.0001;
                 const isClaimable = !isLocked && !isClaimed && (liveClaimableSchedule ?? 0) > 0 && canClaim;
                 const days = daysUntil(g.firstUnlock);
+                // Show claimable amount when claim is available, otherwise show group total
+                const displayAmount = isClaimable && liveClaimableSchedule !== null
+                  ? Math.min(liveClaimableSchedule, g.amount - groupClaimed)
+                  : g.amount;
                 return (
                   <div key={gi} className={`flex items-center justify-between px-5 py-3.5 ${isClaimable ? "bg-success/5" : ""}`}>
                     <div className="flex items-center gap-3">
@@ -503,7 +532,7 @@ export default function VestingTab({ address, isConnected, isOnCorrectChain, sal
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-semibold text-foreground">
-                        {g.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} MLC
+                        {displayAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} MLC
                       </span>
                       {isClaimable ? (
                         <button onClick={handleClaimClick} className="mlc-btn-primary text-xs px-3 py-1.5 flex items-center gap-1">

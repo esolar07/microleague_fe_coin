@@ -324,7 +324,7 @@ const ProfileTab = () => {
       </div>
 
       {/* Security & Preferences */}
-      <div className="mlc-card-elevated">
+      {/* <div className="mlc-card-elevated">
         <div className="flex items-center gap-3 mb-4">
           <Shield className="w-5 h-5 text-success" />
           <h3 className="text-lg font-semibold text-foreground">Security & Preferences</h3>
@@ -364,7 +364,7 @@ const ProfileTab = () => {
           {savingPrefs ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           Save Preferences
         </motion.button>
-      </div>
+      </div> */}
     </motion.div>
   );
 };

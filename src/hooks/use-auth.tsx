@@ -70,11 +70,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Auto-logout when wallet disconnects (Coinbase session ends, user disconnects, etc.)
   useEffect(() => {
-    if (wasConnected.current && !isConnected && auth) {
+    if (wasConnected.current && !isConnected/*  && auth */) {
       logout();
     }
     wasConnected.current = isConnected;
   }, [isConnected, auth, logout]);
+
+  // Auto-logout when CDP returns 401 — stale/expired session detected on init
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      const msg = event.reason instanceof Error ? event.reason.message : String(event.reason ?? "");
+      if (msg.includes("401") || msg.includes("Unauthorized")) {
+        event.preventDefault();
+        if (auth) logout();
+      }
+    };
+    window.addEventListener("unhandledrejection", handler);
+    return () => window.removeEventListener("unhandledrejection", handler);
+  }, [auth, logout]);
 
   const token = auth?.token ?? null;
   const user = auth?.user ?? null;

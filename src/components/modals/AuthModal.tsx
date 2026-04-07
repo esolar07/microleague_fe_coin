@@ -255,6 +255,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     setOtp(["", "", "", "", "", ""]);
     setAuthError(null);
     setAutoSwitchAttempted(false);
+    autoSignAttempted.current = false;
     onClose();
   };
 
@@ -264,6 +265,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     setOtp(["", "", "", "", "", ""]);
     setAuthError(null);
     setAutoSwitchAttempted(false);
+    autoSignAttempted.current = false;
     onSuccess();
   };
 
@@ -278,6 +280,8 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     (async () => {
       try {
         await switchChainAsync({ chainId: APP_CHAIN.id });
+        // Chain switched successfully — now auto-sign
+        handleWalletSignIn();
       } catch (error) {
         setAuthError(
           error instanceof Error ? error.message : "Failed to switch network"
@@ -292,6 +296,20 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     step,
     switchChainAsync,
   ]);
+
+  // Auto-trigger sign message when wallet is already connected and on correct chain
+  const autoSignAttempted = useRef(false);
+  useEffect(() => {
+    if (!isConnected) return;
+    if (step !== "wallet-select") return;
+    if (chainId !== APP_CHAIN.id) return;
+    if (isAuthenticated) return;
+    if (autoSignAttempted.current) return;
+
+    autoSignAttempted.current = true;
+    handleWalletSignIn();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, step, chainId, isAuthenticated]);
 
   const handleBack = () => {
     if (step === "email" || step === "wallet-select") {
@@ -380,7 +398,15 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                     <motion.button
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
-                      onClick={() => setStep("wallet-select")}
+                      onClick={() => {
+                        if (isConnected && chainId === APP_CHAIN.id) {
+                          // Wallet already connected on correct chain — skip to sign
+                          setStep("wallet-select");
+                          handleWalletSignIn();
+                        } else {
+                          setStep("wallet-select");
+                        }
+                      }}
                       className="w-full p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all text-left"
                     >
                       <div className="flex items-center gap-3">

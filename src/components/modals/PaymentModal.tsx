@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
-  CreditCard,
   Coins,
   ArrowLeft,
   CheckCircle,
@@ -11,7 +10,6 @@ import {
   Building2,
   Upload,
   FileText,
-  Mail,
   Shield,
   Clock,
   Download,
@@ -27,6 +25,8 @@ import {
 } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 import { APP_CHAIN } from "@/config/network";
+import { SAFTService } from "@/services/saft";
+import { submitBankTransfer } from "@/services/bankTransfer";
 import {
   PAYMENT_TOKEN_DECIMALS,
   PRESALE_ADDRESS,
@@ -88,6 +88,15 @@ const PaymentModal = ({
   const [onrampError, setOnrampError] = useState<string | null>(null);
   const [onrampUrl, setOnrampUrl] = useState<string | null>(null);
   const [actualChainId, setActualChainId] = useState<number | null>(null);
+
+  // Bank transfer state
+  const [bankProofFile, setBankProofFile] = useState<File | null>(null);
+  const [bankSenderName, setBankSenderName] = useState("");
+  const [bankBankName, setBankBankName] = useState("");
+  const [bankTransactionRef, setBankTransactionRef] = useState("");
+  const [bankError, setBankError] = useState<string | null>(null);
+  const [bankSubmitting, setBankSubmitting] = useState(false);
+  const [bankTransferId, setBankTransferId] = useState<string | null>(null);
 
   // Stable ref for txRef — generated once per modal open, not every render
   const txRefRef = useRef(`MLC-${Date.now().toString(36).toUpperCase()}`);
@@ -172,6 +181,31 @@ const PaymentModal = ({
   });
 
   const stageId = currentStage?.[0];
+  const stageData = currentStage?.[1];
+
+  // Extract vesting info from stage (values are in seconds)
+  const cliffSeconds = stageData ? Number(stageData.cliff ?? stageData[7] ?? 0) : 0;
+  const durationSeconds = stageData ? Number(stageData.duration ?? stageData[8] ?? 0) : 0;
+  const releaseIntervalSeconds = stageData ? Number(stageData.releaseInterval ?? stageData[9] ?? 0) : 0;
+
+  const formatDuration = (seconds: number): string => {
+    if (seconds === 0) return 'None';
+    const days = Math.floor(seconds / 86400);
+    if (days >= 365) return `${Math.round(days / 365)} year${days >= 730 ? 's' : ''}`;
+    if (days >= 30) return `${Math.round(days / 30)} month${days >= 60 ? 's' : ''}`;
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''}`;
+    const hours = Math.floor(seconds / 3600);
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
+    return `${Math.floor(seconds / 60)} min`;
+  };
+
+  const cliffDisplay = formatDuration(cliffSeconds);
+  const durationDisplay = formatDuration(durationSeconds);
+  const releaseDisplay = formatDuration(releaseIntervalSeconds);
+  const numReleases = releaseIntervalSeconds > 0 && durationSeconds > 0
+    ? Math.floor(durationSeconds / releaseIntervalSeconds)
+    : 0;
+  const unlockPercent = numReleases > 0 ? Math.round(100 / numReleases) : 100;
 
   // Stable args array — only changes when stageId or requiredUsdc actually change
   const calcArgs = useMemo(
@@ -298,8 +332,20 @@ const PaymentModal = ({
 
       setStep("success");
     } catch (error) {
-      setCryptoError(formatBlockchainError(error));
-      setStep("crypto");
+      const isInsufficientBalance =
+        (error instanceof Error && (
+          error.message.includes("Insufficient balance") ||
+          error.message.includes("insufficient balance") ||
+          error.message.includes("Transaction creation failed")
+        )) ||
+        (error as any)?.cause?.message?.includes("Insufficient balance");
+
+      if (isInsufficientBalance) {
+        setStep("topup");
+      } else {
+        setCryptoError(formatBlockchainError(error));
+        setStep("crypto");
+      }
     } finally {
       setIsApproving(false);
       setIsBuying(false);
@@ -397,25 +443,64 @@ const PaymentModal = ({
     setTimeout(() => setStep("success"), 2000);
   };
 
-  const handleBankUpload = () => {
-    setReceiptUploaded(true);
-    setTimeout(() => {
-      setStep("processing");
-      setTimeout(() => setStep("success"), 2500);
-    }, 1000);
+  const handleBankUpload = async () => {
+    if (!bankProofFile || !address) return;
+    if (!bankSenderName.trim()) { setBankError("Please enter your name"); return; }
+    if (!bankBankName.trim()) { setBankError("Please enter your bank name"); return; }
+    if (!bankTransactionRef.trim()) { setBankError("Please enter the transaction reference"); return; }
+
+    setBankError(null);
+    setBankSubmitting(true);
+    try {
+      const result = await submitBankTransfer({
+        walletAddress: address,
+        amount: numericAmount,
+        senderName: bankSenderName,
+        bankName: bankBankName,
+        transactionRef: bankTransactionRef,
+        paymentRef: txRef,
+        proofFile: bankProofFile,
+        notes: `Presale purchase of ${displayMlc.toLocaleString()} MLC`,
+      });
+      setBankTransferId(result.transferId);
+      setStep("success");
+    } catch (err) {
+      setBankError(err instanceof Error ? err.message : "Failed to submit bank transfer");
+    } finally {
+      setBankSubmitting(false);
+    }
   };
 
   const handleClose = () => {
     setStep("select");
     setReceiptUploaded(false);
     setEmailSent(false);
+    setBankProofFile(null);
+    setBankSenderName("");
+    setBankBankName("");
+    setBankTransactionRef("");
+    setBankError(null);
+    setBankTransferId(null);
     onClose();
   };
-  //
-  const handleSuccessClose = () => {
+
+  const handleSuccessClose = async () => {
+    if (txHash) {
+      try {
+        await SAFTService.downloadCertificate(txHash);
+      } catch (error) {
+        console.error('Error downloading SAFT certificate:', error);
+      }
+    }
     setStep("select");
     setReceiptUploaded(false);
     setEmailSent(false);
+    setBankProofFile(null);
+    setBankSenderName("");
+    setBankBankName("");
+    setBankTransactionRef("");
+    setBankError(null);
+    setBankTransferId(null);
     onSuccess();
   };
 
@@ -424,7 +509,22 @@ const PaymentModal = ({
   };
 
   const handleSendSAFT = () => {
+    // Note: Email is now sent automatically by the listener
+    // This button is kept for UI consistency
     setEmailSent(true);
+  };
+
+  const handleDownloadSAFT = async () => {
+    if (txHash) {
+      try {
+        await SAFTService.downloadCertificate(txHash);
+      } catch (error) {
+        console.error('Error downloading SAFT certificate:', error);
+      }
+    } else {
+      // Fallback to using transaction reference
+      await SAFTService.downloadCertificateByRef(txRef);
+    }
   };
 
   const copyToClipboard = (text: string, field: string) => {
@@ -643,7 +743,7 @@ const PaymentModal = ({
                         <p className="text-sm font-medium text-destructive">
                           Transaction failed
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground break-all">
                           {cryptoError}
                         </p>
                       </div>
@@ -835,35 +935,6 @@ const PaymentModal = ({
                     <motion.button
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
-                      onClick={processPayment}
-                      className="w-full p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all text-left"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                          <CreditCard className="w-5 h-5 text-foreground" />
-                        </div>
-                        <div>
-                          <span className="font-medium text-foreground">
-                            Card Top-up
-                          </span>
-                          <p className="text-sm text-muted-foreground">
-                            Add $
-                            {(
-                              amount -
-                              (usdcBalance
-                                ? Number(usdcBalance.formatted)
-                                : 0) +
-                              5
-                            ).toFixed(2)}{" "}
-                            via card
-                          </p>
-                        </div>
-                      </div>
-                    </motion.button>
-
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
                       onClick={handleCoinbaseOnramp}
                       disabled={!COINBASE_PROJECT_ID || !address}
                       className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1025,65 +1096,108 @@ const PaymentModal = ({
                         Upload Receipt
                       </h2>
                       <p className="text-sm text-muted-foreground">
-                        Upload proof of your transfer
+                        Fill in your details and upload proof
                       </p>
                     </div>
                   </div>
 
+                  <div className="space-y-3 mb-4">
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Your Full Name *</label>
+                      <input
+                        type="text"
+                        value={bankSenderName}
+                        onChange={(e) => setBankSenderName(e.target.value)}
+                        placeholder="John Doe"
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Your Bank Name *</label>
+                      <input
+                        type="text"
+                        value={bankBankName}
+                        onChange={(e) => setBankBankName(e.target.value)}
+                        placeholder="Bank of America"
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Transaction Reference *</label>
+                      <input
+                        type="text"
+                        value={bankTransactionRef}
+                        onChange={(e) => setBankTransactionRef(e.target.value)}
+                        placeholder="TXN123456789"
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
                   <div className="mb-4">
-                    <div
-                      onClick={handleBankUpload}
-                      className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                        receiptUploaded
+                    <label className="text-xs text-muted-foreground mb-1 block">Proof of Transfer *</label>
+                    <label
+                      className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors flex flex-col items-center gap-2 ${
+                        bankProofFile
                           ? "border-success bg-success/5"
                           : "border-border hover:border-primary hover:bg-primary/5"
                       }`}
                     >
-                      {receiptUploaded ? (
+                      <input
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.gif"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setBankProofFile(file);
+                        }}
+                      />
+                      {bankProofFile ? (
                         <>
-                          <CheckCircle className="w-10 h-10 text-success mx-auto mb-3" />
-                          <p className="font-medium text-foreground">
-                            Receipt Uploaded
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            bank_receipt.pdf
-                          </p>
+                          <CheckCircle className="w-8 h-8 text-success" />
+                          <p className="font-medium text-foreground text-sm">{bankProofFile.name}</p>
+                          <p className="text-xs text-muted-foreground">{(bankProofFile.size / 1024).toFixed(0)} KB</p>
                         </>
                       ) : (
                         <>
-                          <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                          <p className="font-medium text-foreground">
-                            Click to upload receipt
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            PDF, PNG, or JPG (max 10MB)
-                          </p>
+                          <Upload className="w-8 h-8 text-muted-foreground" />
+                          <p className="font-medium text-foreground text-sm">Click to upload receipt</p>
+                          <p className="text-xs text-muted-foreground">PDF, PNG, or JPG (max 10MB)</p>
                         </>
                       )}
-                    </div>
+                    </label>
                   </div>
 
                   <div className="p-3 rounded-xl bg-secondary/50 mb-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Reference</span>
-                      <span className="font-mono text-foreground">
-                        {bankDetails.reference}
-                        {txRef}
-                      </span>
+                      <span className="text-muted-foreground">Payment Ref</span>
+                      <span className="font-mono text-foreground text-xs">{txRef}</span>
                     </div>
                     <div className="flex justify-between text-sm mt-1">
                       <span className="text-muted-foreground">Amount</span>
-                      <span className="font-semibold text-foreground">
-                        ${numericAmount.toFixed(2)} USD
-                      </span>
+                      <span className="font-semibold text-foreground">${numericAmount.toFixed(2)} USD</span>
                     </div>
                   </div>
 
-                  {!receiptUploaded && (
-                    <p className="text-xs text-muted-foreground text-center mb-4">
-                      Upload your transfer receipt for faster processing
-                    </p>
+                  {bankError && (
+                    <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 mb-4">
+                      <p className="text-xs text-destructive">{bankError}</p>
+                    </div>
                   )}
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleBankUpload}
+                    disabled={bankSubmitting || !bankProofFile}
+                    className="w-full mlc-btn-primary flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {bankSubmitting ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                    ) : (
+                      "Submit Transfer"
+                    )}
+                  </motion.button>
                 </>
               )}
 
@@ -1112,15 +1226,16 @@ const PaymentModal = ({
                     <CheckCircle className="w-8 h-8 text-success" />
                   </motion.div>
                   <h2 className="text-xl font-semibold text-foreground">
-                    Purchase Successful!
+                    {bankTransferId ? "Transfer Submitted!" : "Purchase Successful!"}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-2 mb-4">
-                    You've purchased{" "}
-                    <span className="font-semibold text-primary">
-                      {displayMlc.toLocaleString()} MLC
-                    </span>
+                    {bankTransferId ? (
+                      <>Transfer ID: <span className="font-semibold text-primary">{bankTransferId}</span></>
+                    ) : (
+                      <>You've purchased{" "}<span className="font-semibold text-primary">{displayMlc.toLocaleString()} MLC</span></>
+                    )}
                   </p>
-                  {txHash && (
+                  {txHash && !bankTransferId && (
                     <p className="text-xs text-muted-foreground mb-4 break-all">
                       Tx:{" "}
                       <span className="font-mono text-foreground">
@@ -1128,9 +1243,17 @@ const PaymentModal = ({
                       </span>
                     </p>
                   )}
+                  {bankTransferId && (
+                    <div className="p-4 rounded-xl bg-warning/10 border border-warning/20 mb-4 text-left">
+                      <p className="text-sm text-warning flex items-start gap-2">
+                        <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        Your transfer is pending manual verification. Tokens will be allocated within 1-3 business days after confirmation.
+                      </p>
+                    </div>
+                  )}
 
-                  {/* SAFT & Vesting Info */}
-                  <div className="text-left space-y-3 mb-6">
+                  {/* SAFT & Vesting Info — only for crypto purchases */}
+                  {!bankTransferId && <div className="text-left space-y-3 mb-6">
                     <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                       <div className="flex items-start gap-3">
                         <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
@@ -1155,29 +1278,21 @@ const PaymentModal = ({
                         <span className="text-muted-foreground">
                           Cliff Period
                         </span>
-                        <span className="text-foreground">3 months</span>
+                        <span className="text-foreground">{cliffDisplay}</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">
                           Vesting Duration
                         </span>
                         <span className="text-foreground">
-                          12 months (quarterly)
+                          {durationDisplay}{releaseIntervalSeconds > 0 ? ` (every ${releaseDisplay})` : ''}
                         </span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">
                           First Unlock
                         </span>
-                        <span className="text-foreground">25% after cliff</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          Auto-Stake
-                        </span>
-                        <span className="text-success">
-                          12.5% APY available
-                        </span>
+                        <span className="text-foreground">{unlockPercent}% after cliff</span>
                       </div>
                     </div>
 
@@ -1188,18 +1303,20 @@ const PaymentModal = ({
                         will vest per the schedule above.
                       </p>
                     </div>
-                  </div>
+                  </div>}
 
                   <div className="space-y-3">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={handleViewSAFT}
-                      className="w-full mlc-btn-primary flex items-center justify-center gap-2"
-                    >
-                      <FileText className="w-4 h-4" />
-                      View SAFT Certificate
-                    </motion.button>
+                    {!bankTransferId && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleViewSAFT}
+                        className="w-full mlc-btn-primary flex items-center justify-center gap-2"
+                      >
+                        <FileText className="w-4 h-4" />
+                        View SAFT Certificate
+                      </motion.button>
+                    )}
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
@@ -1285,7 +1402,7 @@ const PaymentModal = ({
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Vesting</span>
                         <span className="font-medium text-foreground">
-                          12mo, quarterly, 3mo cliff
+                          {durationDisplay}, every {releaseDisplay}, {cliffDisplay} cliff
                         </span>
                       </div>
                     </div>
@@ -1294,7 +1411,7 @@ const PaymentModal = ({
                       <p className="text-xs text-muted-foreground">
                         This SAFT certificate confirms your token allocation
                         under the MicroLeague Presale Phase 1 terms. Tokens vest
-                        quarterly over 12 months with a 3-month cliff period.
+                        every {releaseDisplay} over {durationDisplay} with a {cliffDisplay} cliff period.
                       </p>
                     </div>
                   </div>
@@ -1303,25 +1420,11 @@ const PaymentModal = ({
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={handleSendSAFT}
-                      disabled={emailSent}
-                      className={`w-full flex items-center justify-center gap-2 ${
-                        emailSent
-                          ? "mlc-btn-secondary opacity-80"
-                          : "mlc-btn-primary"
-                      }`}
+                      onClick={handleDownloadSAFT}
+                      className="w-full mlc-btn-primary flex items-center justify-center gap-2"
                     >
-                      {emailSent ? (
-                        <>
-                          <CheckCircle className="w-4 h-4 text-success" />
-                          SAFT Sent to Email
-                        </>
-                      ) : (
-                        <>
-                          <Mail className="w-4 h-4" />
-                          Email SAFT Certificate
-                        </>
-                      )}
+                      <Download className="w-4 h-4" />
+                      Download PDF
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -1329,8 +1432,7 @@ const PaymentModal = ({
                       onClick={handleSuccessClose}
                       className="w-full mlc-btn-secondary flex items-center justify-center gap-2"
                     >
-                      <Download className="w-4 h-4" />
-                      Download PDF & Close
+                      Close
                     </motion.button>
                   </div>
                 </>

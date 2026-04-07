@@ -6,7 +6,7 @@ import {
   Copy, CheckCircle, User, Wallet, Shield, Clock,
   Calendar, Award, ChevronRight, X, Sparkles, Zap,
   Lock,
-  Trophy, Star
+  Trophy, Star, Building2
 } from "lucide-react";
 import {
   useAccount,
@@ -27,13 +27,15 @@ import VestingTab from "./VestingTab";
 import ProfileTab from "./ProfileTab";
 import PaymentModal from "@/components/modals/PaymentModal";
 import PresaleWidget from "@/components/presale/PresaleWidget";
+import { useBankTransfers } from "@/hooks/use-bank-transfers";
+import type { BankTransferRecord } from "@/services/bankTransfer";
 import { APP_CHAIN } from "@/config/network";
 import { PRESALE_ADDRESS, USDC_ADDRESS } from "@/config/presale";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
 import { useAuth } from "@/hooks/use-auth";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
 import { getRecentActivity, type ActivityRecord } from "@/services/activity";
-import { useLinkEmail } from "@coinbase/cdp-hooks";
+import { useLinkEmail, useSignOut } from "@coinbase/cdp-hooks";
 
 const tabs: { id: string; label: string; icon: React.ElementType; badge?: string }[] = [
   { id: "overview", label: "Overview", icon: TrendingUp },
@@ -44,6 +46,7 @@ const tabs: { id: string; label: string; icon: React.ElementType; badge?: string
   { id: "leagues", label: "Leagues", icon: Users, badge: "New" },
   { id: "vesting", label: "Vesting", icon: Lock },
   { id: "rewards", label: "Rewards & Referrals", icon: Gift },
+  { id: "bank-transfers", label: "Bank Transfers", icon: Building2 },
   { id: "profile", label: "Profile", icon: User },
 ];
 
@@ -114,6 +117,7 @@ const UserDashboard = () => {
   const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
   const { isAuthenticated, logout, user } = useAuth();
+  const { signOut } = useSignOut();
   const navigate = useNavigate();
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
@@ -124,6 +128,9 @@ const UserDashboard = () => {
   const effectiveAddress = address ?? (user?.walletAddress as `0x${string}` | undefined);
   const isWalletReady = isConnected || (isAuthenticated && !!effectiveAddress);
   const isOnCorrectChain = !isConnected || chainId === APP_CHAIN.id;
+
+  // Bank transfers — fetched via react-query
+  const { data: bankTransferData = [], isLoading: bankTransferLoading } = useBankTransfers(effectiveAddress);
 
   // Fetch recent activity when wallet is connected
   useEffect(() => {
@@ -337,20 +344,22 @@ const UserDashboard = () => {
     setShowBuyModal(true);
   };
 
-  const handleLogoutAndDisconnect = () => {
+  const handleLogoutAndDisconnect = async () => {
     if (isConnected || isAuthenticated) {
-      // Logout user authentication
-      if (isAuthenticated) {
-        logout();
+      // Sign out from Coinbase CDP session — 401 means session already expired, that's fine
+      try {
+        await signOut();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!msg.includes("401") && !msg.includes("Unauthorized")) {
+          console.error("signOut error:", err);
+        }
       }
-      // Disconnect wallet
-      if (isConnected) {
-        disconnect();
-      }
-      // Redirect to home page
+      // Always clear local state regardless of CDP API result
+      if (isAuthenticated) logout();
+      if (isConnected) disconnect();
       navigate("/");
     } else {
-      // Open connect modal if not connected
       openConnectModal?.();
     }
   };
@@ -1093,6 +1102,96 @@ const UserDashboard = () => {
                 <p className="text-2xl font-bold text-foreground">0</p>
                 <p className="text-sm text-muted-foreground">Win Rate</p>
               </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Bank Transfers Tab */}
+        {activeTab === "bank-transfers" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="mlc-card-elevated">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Bank Transfer Submissions</h3>
+                  <p className="text-sm text-muted-foreground">Track the status of your bank transfer verifications</p>
+                </div>
+                <Building2 className="w-5 h-5 text-muted-foreground" />
+              </div>
+
+              {!effectiveAddress ? (
+                <div className="py-10 text-center text-muted-foreground text-sm">
+                  Connect your wallet to view bank transfers.
+                </div>
+              ) : bankTransferLoading ? (
+                <div className="py-10 flex justify-center">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full"
+                  />
+                </div>
+              ) : bankTransferData.length === 0 ? (
+                <div className="py-10 text-center">
+                  <Building2 className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+                  <p className="text-sm text-muted-foreground">No bank transfers submitted yet.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Use the Bank / Wire Transfer option when purchasing MLC.</p>
+                </div>
+              ) : (
+                <div className="space-y-0 divide-y divide-border">
+                  {bankTransferData.map((transfer) => (
+                    <div key={transfer.id} className="py-4 flex items-start gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        transfer.status === 'Verified' ? 'bg-success/10' :
+                        transfer.status === 'Rejected' ? 'bg-destructive/10' :
+                        'bg-warning/10'
+                      }`}>
+                        {transfer.status === 'Verified' ? (
+                          <CheckCircle className="w-5 h-5 text-success" />
+                        ) : transfer.status === 'Rejected' ? (
+                          <X className="w-5 h-5 text-destructive" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-warning" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <p className="font-medium text-foreground text-sm">${transfer.amount.toLocaleString()} USD</p>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            transfer.status === 'Verified' ? 'bg-success/10 text-success' :
+                            transfer.status === 'Rejected' ? 'bg-destructive/10 text-destructive' :
+                            'bg-warning/10 text-warning'
+                          }`}>
+                            {transfer.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {transfer.senderName} · {transfer.bankName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Ref: {transfer.transactionRef} · {new Date(transfer.createdAt).toLocaleDateString()}
+                        </p>
+                        {transfer.verificationNote && (
+                          <p className="text-xs text-muted-foreground mt-1 italic">"{transfer.verificationNote}"</p>
+                        )}
+                        {transfer.proofUrl && (
+                          <a
+                            href={transfer.proofUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline mt-1 inline-block"
+                          >
+                            View proof
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
