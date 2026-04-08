@@ -2,11 +2,28 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Coins, Gift, Users, Gamepad2, TrendingUp, ExternalLink,
-  Copy, CheckCircle, User, Wallet, Shield, Clock,
-  Calendar, Award, ChevronRight, X, Sparkles, Zap,
+  Coins,
+  Gift,
+  Users,
+  Gamepad2,
+  TrendingUp,
+  ExternalLink,
+  Copy,
+  CheckCircle,
+  User,
+  Wallet,
+  Shield,
+  Clock,
+  Calendar,
+  Award,
+  ChevronRight,
+  X,
+  Sparkles,
+  Zap,
   Lock,
-  Trophy, Star, Building2
+  Trophy,
+  Star,
+  Building2,
 } from "lucide-react";
 import {
   useAccount,
@@ -38,7 +55,12 @@ import type { ActivityRecord } from "@/services/activity";
 import { useActivity } from "@/hooks/use-activity";
 import { useLinkEmail, useSignOut } from "@coinbase/cdp-hooks";
 
-const tabs: { id: string; label: string; icon: React.ElementType; badge?: string }[] = [
+const tabs: {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  badge?: string;
+}[] = [
   { id: "overview", label: "Overview", icon: TrendingUp },
   { id: "simulations", label: "Simulations", icon: Gamepad2 },
   { id: "tokens", label: "My Tokens", icon: Coins },
@@ -89,7 +111,10 @@ function formatRelativeTime(timestamp: string): string {
   return new Date(timestamp).toLocaleDateString();
 }
 
-const ACTIVITY_ICON_MAP: Record<ActivityRecord["activityType"], { icon: React.ElementType; bg: string; color: string }> = {
+const ACTIVITY_ICON_MAP: Record<
+  ActivityRecord["activityType"],
+  { icon: React.ElementType; bg: string; color: string }
+> = {
   Buy: { icon: Coins, bg: "bg-primary/10", color: "text-primary" },
   Claim: { icon: Gift, bg: "bg-success/10", color: "text-success" },
   Vesting_Created: { icon: Lock, bg: "bg-warning/10", color: "text-warning" },
@@ -106,7 +131,9 @@ const UserDashboard = () => {
   const [claimSuccess, setClaimSuccess] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">("details");
+  const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">(
+    "details",
+  );
 
   // Wallet connection and auth
   const { address, isConnected } = useAccount();
@@ -118,27 +145,33 @@ const UserDashboard = () => {
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
 
-
   // Coinbase email login goes through CDP SDK (not wagmi), so wagmi won't have the address.
   // Fall back to the auth context's wallet address in that case.
-  const effectiveAddress = address ?? (user?.walletAddress as `0x${string}` | undefined);
+  const effectiveAddress =
+    address ?? (user?.walletAddress as `0x${string}` | undefined);
   const isWalletReady = isConnected || (isAuthenticated && !!effectiveAddress);
   const isOnCorrectChain = !isConnected || chainId === APP_CHAIN.id;
 
   // Activity feed via React Query
-  const { data: activityPage, isLoading: activityLoading, isError: activityError } = useActivity(effectiveAddress);
+  const {
+    data: activityPage,
+    isLoading: activityLoading,
+    isError: activityError,
+  } = useActivity(effectiveAddress);
 
   // Bank transfers — fetched via react-query
-  const { data: bankTransferData = [], isLoading: bankTransferLoading } = useBankTransfers(effectiveAddress);
-
-  
+  const { data: bankTransferData = [], isLoading: bankTransferLoading } =
+    useBankTransfers(effectiveAddress);
 
   // Get USDC balance
   const { data: usdcBalance } = useBalance({
     address: effectiveAddress,
     token: USDC_ADDRESS,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(effectiveAddress && USDC_ADDRESS), staleTime: 30_000 },
+    query: {
+      enabled: Boolean(effectiveAddress && USDC_ADDRESS),
+      staleTime: 30_000,
+    },
   });
 
   // Shared query config for presale contract reads — avoids hammering RPC on every render
@@ -172,7 +205,10 @@ const UserDashboard = () => {
     functionName: "vestedAmount",
     args: effectiveAddress ? [effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS), ...contractQueryConfig },
+    query: {
+      enabled: Boolean(effectiveAddress && PRESALE_ADDRESS),
+      ...contractQueryConfig,
+    },
   });
 
   // Get user's total allocated amount (total MLC purchased/assigned)
@@ -182,7 +218,10 @@ const UserDashboard = () => {
     functionName: "totalAllocated",
     args: effectiveAddress ? [effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS), ...contractQueryConfig },
+    query: {
+      enabled: Boolean(effectiveAddress && PRESALE_ADDRESS),
+      ...contractQueryConfig,
+    },
   });
 
   // Get user's total claimed amount
@@ -192,7 +231,10 @@ const UserDashboard = () => {
     functionName: "totalClaimed",
     args: effectiveAddress ? [effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS), ...contractQueryConfig },
+    query: {
+      enabled: Boolean(effectiveAddress && PRESALE_ADDRESS),
+      ...contractQueryConfig,
+    },
   });
 
   // Get user's claimable amount (available MLC)
@@ -202,7 +244,10 @@ const UserDashboard = () => {
     functionName: "claimableAmount",
     args: effectiveAddress ? [effectiveAddress] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS), ...contractQueryConfig },
+    query: {
+      enabled: Boolean(effectiveAddress && PRESALE_ADDRESS),
+      ...contractQueryConfig,
+    },
   });
 
   // Get user's purchases for current stage
@@ -211,9 +256,17 @@ const UserDashboard = () => {
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "buyerPurchasedForStage",
-    args: effectiveAddress && currentStageId !== undefined ? [currentStageId, effectiveAddress] : undefined,
+    args:
+      effectiveAddress && currentStageId !== undefined
+        ? [currentStageId, effectiveAddress]
+        : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS && currentStageId !== undefined), ...contractQueryConfig },
+    query: {
+      enabled: Boolean(
+        effectiveAddress && PRESALE_ADDRESS && currentStageId !== undefined,
+      ),
+      ...contractQueryConfig,
+    },
   });
 
   // Get token amount purchased for current stage (if contract tracks it)
@@ -221,9 +274,17 @@ const UserDashboard = () => {
     abi: tokenPresaleAbi,
     address: PRESALE_ADDRESS,
     functionName: "buyerPurchased",
-    args: effectiveAddress && currentStageId !== undefined ? [currentStageId, effectiveAddress] : undefined,
+    args:
+      effectiveAddress && currentStageId !== undefined
+        ? [currentStageId, effectiveAddress]
+        : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(effectiveAddress && PRESALE_ADDRESS && currentStageId !== undefined), ...contractQueryConfig },
+    query: {
+      enabled: Boolean(
+        effectiveAddress && PRESALE_ADDRESS && currentStageId !== undefined,
+      ),
+      ...contractQueryConfig,
+    },
   });
 
   // Calculate real MLC amounts
@@ -243,14 +304,16 @@ const UserDashboard = () => {
       ? Number(formatUnits(userVestedAmount, saleTokenDecimalsNum))
       : 0;
 
-  const claimableMLC = userClaimableAmount !== undefined && saleTokenDecimalsNum !== undefined
-    ? Number(formatUnits(userClaimableAmount, saleTokenDecimalsNum))
-    : 0;
+  const claimableMLC =
+    userClaimableAmount !== undefined && saleTokenDecimalsNum !== undefined
+      ? Number(formatUnits(userClaimableAmount, saleTokenDecimalsNum))
+      : 0;
 
   // Locked = allocated minus (already claimed + currently claimable)
-  const lockedTokens = Math.max(0, totalAllocatedMLC - totalClaimedMLC - claimableMLC);
-
-
+  const lockedTokens = Math.max(
+    0,
+    totalAllocatedMLC - totalClaimedMLC - claimableMLC,
+  );
 
   // Real-time stats combining contract data and mock data
   const stats = {
@@ -262,19 +325,115 @@ const UserDashboard = () => {
     totalPoints: 1250, // This could come from a points contract
     referrals: 12, // This could come from a referral contract
     pendingRewards: 250, // This could come from a rewards contract
-    usdcBalance: usdcBalance ? Number(usdcBalance.value) / Math.pow(10, usdcBalance.decimals) : 0,
+    usdcBalance: usdcBalance
+      ? Number(usdcBalance.value) / Math.pow(10, usdcBalance.decimals)
+      : 0,
   };
 
   // Available leagues mock data
   const availableLeagues: League[] = [
-    { id: 1, name: "Street Champions League", sport: "Football", type: "Professional", creator: "Coach Mike", members: 1240, maxMembers: 1500, entryFee: 100, prizePool: 50000, format: "Round Robin", startDate: "Mar 1, 2026", duration: "Season (3 Months)", status: "Open", region: "Global", description: "The ultimate street football league. Compete against top players worldwide for massive prizes.", wins: null, rank: null },
-    { id: 2, name: "Weekend Warriors Cup", sport: "Basketball", type: "Amateur", creator: "BBall Dave", members: 380, maxMembers: 512, entryFee: 50, prizePool: 15000, format: "Knockout", startDate: "Feb 20, 2026", duration: "2 Weeks", status: "Open", region: "North America", description: "Casual basketball league for weekend ballers. All skill levels welcome.", wins: null, rank: null },
-    { id: 3, name: "E-Sports Arena S2", sport: "E-Sports", type: "Professional", creator: "GameMaster", members: 2048, maxMembers: 2048, entryFee: 200, prizePool: 100000, format: "Double Elimination", startDate: "Feb 15, 2026", duration: "1 Month", status: "Full", region: "Global", description: "Season 2 of the biggest e-sports league on MicroLeague.", wins: null, rank: null },
-    { id: 4, name: "Community Cricket Cup", sport: "Cricket", type: "Community", creator: "CricketFan", members: 156, maxMembers: 256, entryFee: 0, prizePool: 5000, format: "Swiss", startDate: "Mar 15, 2026", duration: "1 Month", status: "Open", region: "Asia", description: "Free-to-enter community cricket tournament. Fun first, competition second!", wins: null, rank: null },
+    {
+      id: 1,
+      name: "Street Champions League",
+      sport: "Football",
+      type: "Professional",
+      creator: "Coach Mike",
+      members: 1240,
+      maxMembers: 1500,
+      entryFee: 100,
+      prizePool: 50000,
+      format: "Round Robin",
+      startDate: "Mar 1, 2026",
+      duration: "Season (3 Months)",
+      status: "Open",
+      region: "Global",
+      description:
+        "The ultimate street football league. Compete against top players worldwide for massive prizes.",
+      wins: null,
+      rank: null,
+    },
+    {
+      id: 2,
+      name: "Weekend Warriors Cup",
+      sport: "Basketball",
+      type: "Amateur",
+      creator: "BBall Dave",
+      members: 380,
+      maxMembers: 512,
+      entryFee: 50,
+      prizePool: 15000,
+      format: "Knockout",
+      startDate: "Feb 20, 2026",
+      duration: "2 Weeks",
+      status: "Open",
+      region: "North America",
+      description:
+        "Casual basketball league for weekend ballers. All skill levels welcome.",
+      wins: null,
+      rank: null,
+    },
+    {
+      id: 3,
+      name: "E-Sports Arena S2",
+      sport: "E-Sports",
+      type: "Professional",
+      creator: "GameMaster",
+      members: 2048,
+      maxMembers: 2048,
+      entryFee: 200,
+      prizePool: 100000,
+      format: "Double Elimination",
+      startDate: "Feb 15, 2026",
+      duration: "1 Month",
+      status: "Full",
+      region: "Global",
+      description: "Season 2 of the biggest e-sports league on MicroLeague.",
+      wins: null,
+      rank: null,
+    },
+    {
+      id: 4,
+      name: "Community Cricket Cup",
+      sport: "Cricket",
+      type: "Community",
+      creator: "CricketFan",
+      members: 156,
+      maxMembers: 256,
+      entryFee: 0,
+      prizePool: 5000,
+      format: "Swiss",
+      startDate: "Mar 15, 2026",
+      duration: "1 Month",
+      status: "Open",
+      region: "Asia",
+      description:
+        "Free-to-enter community cricket tournament. Fun first, competition second!",
+      wins: null,
+      rank: null,
+    },
   ];
 
   const myLeagues: League[] = [
-    { id: 5, name: "Premier Futsal League", sport: "Football", type: "Amateur", creator: "You", members: 64, maxMembers: 64, entryFee: 75, prizePool: 8000, format: "Round Robin", startDate: "Jan 20, 2026", duration: "Season (3 Months)", status: "Active", region: "Europe", description: "Fast-paced futsal action.", wins: 8, rank: 3, totalMatches: 12 },
+    {
+      id: 5,
+      name: "Premier Futsal League",
+      sport: "Football",
+      type: "Amateur",
+      creator: "You",
+      members: 64,
+      maxMembers: 64,
+      entryFee: 75,
+      prizePool: 8000,
+      format: "Round Robin",
+      startDate: "Jan 20, 2026",
+      duration: "Season (3 Months)",
+      status: "Active",
+      region: "Europe",
+      description: "Fast-paced futsal action.",
+      wins: 8,
+      rank: 3,
+      totalMatches: 12,
+    },
   ];
 
   const handleJoinLeague = (league: League) => {
@@ -348,11 +507,36 @@ const UserDashboard = () => {
   };
 
   const referralHistory = [
-    { user: "alice@***", action: "Signed up", reward: "+50 Points", date: "2 hours ago" },
-    { user: "bob@***", action: "Purchased 1,000 MLC", reward: "+50 MLC", date: "Yesterday" },
-    { user: "charlie@***", action: "Signed up", reward: "+50 Points", date: "3 days ago" },
-    { user: "david@***", action: "Ran simulation", reward: "+25 Points", date: "5 days ago" },
-    { user: "eve@***", action: "Purchased 500 MLC", reward: "+25 MLC", date: "1 week ago" },
+    {
+      user: "alice@***",
+      action: "Signed up",
+      reward: "+50 Points",
+      date: "2 hours ago",
+    },
+    {
+      user: "bob@***",
+      action: "Purchased 1,000 MLC",
+      reward: "+50 MLC",
+      date: "Yesterday",
+    },
+    {
+      user: "charlie@***",
+      action: "Signed up",
+      reward: "+50 Points",
+      date: "3 days ago",
+    },
+    {
+      user: "david@***",
+      action: "Ran simulation",
+      reward: "+25 Points",
+      date: "5 days ago",
+    },
+    {
+      user: "eve@***",
+      action: "Purchased 500 MLC",
+      reward: "+25 MLC",
+      date: "1 week ago",
+    },
   ];
 
   return (
@@ -367,7 +551,9 @@ const UserDashboard = () => {
               </Link>
               <div>
                 <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
-                <p className="text-sm text-muted-foreground">Welcome back, User</p>
+                <p className="text-sm text-muted-foreground">
+                  Welcome back, User
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -392,8 +578,8 @@ const UserDashboard = () => {
                   {user?.profile?.firstName
                     ? user.profile.firstName[0].toUpperCase()
                     : address
-                    ? address.slice(2, 4).toUpperCase()
-                    : "?"}
+                      ? address.slice(2, 4).toUpperCase()
+                      : "?"}
                 </span>
                 {/* Online dot */}
                 {(isConnected || isAuthenticated) && (
@@ -408,15 +594,16 @@ const UserDashboard = () => {
       {/* Tabs */}
       <div className="border-b border-border bg-card sticky top-[72px] z-20">
         <div className="mlc-container">
-          <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
+          <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide ">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap relative ${activeTab === tab.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-secondary"
-                  }`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap relative ${
+                  activeTab === tab.id
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary"
+                }`}
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
@@ -434,27 +621,33 @@ const UserDashboard = () => {
       {/* Content */}
       <div className="mlc-container py-8">
         {/* Connection Status Banner — hide for Coinbase CDP email users (no wagmi connection) */}
-        {!isConnected && !(isAuthenticated && user?.walletType === "coinbase") && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 rounded-xl bg-warning/10 border border-warning/20 flex items-center gap-3"
-          >
-            <Wallet className="w-5 h-5 text-warning" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-warning">Wallet Not Connected</p>
-              <p className="text-xs text-muted-foreground">Connect your wallet to view your MLC balance and transaction history</p>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => openConnectModal?.()}
-              className="mlc-btn-secondary text-sm px-4 py-2"
+        {!isConnected &&
+          !(isAuthenticated && user?.walletType === "coinbase") && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-xl bg-warning/10 border border-warning/20 flex items-center gap-3"
             >
-              Connect Wallet
-            </motion.button>
-          </motion.div>
-        )}
+              <Wallet className="w-5 h-5 text-warning" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-warning">
+                  Wallet Not Connected
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Connect your wallet to view your MLC balance and transaction
+                  history
+                </p>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => openConnectModal?.()}
+                className="mlc-btn-secondary text-sm px-4 py-2"
+              >
+                Connect Wallet
+              </motion.button>
+            </motion.div>
+          )}
 
         {/* Network Mismatch Banner */}
         {isConnected && !isOnCorrectChain && (
@@ -467,7 +660,9 @@ const UserDashboard = () => {
             <div className="flex-1">
               <p className="text-sm font-medium text-warning">Wrong Network</p>
               <p className="text-xs text-muted-foreground">
-                Your dashboard is configured for <span className="font-medium">{APP_CHAIN.name}</span>. Switch networks to load your presale balance.
+                Your dashboard is configured for{" "}
+                <span className="font-medium">{APP_CHAIN.name}</span>. Switch
+                networks to load your presale balance.
               </p>
             </div>
             <motion.button
@@ -484,7 +679,9 @@ const UserDashboard = () => {
               }}
               className="mlc-btn-secondary text-sm px-4 py-2 disabled:opacity-60"
             >
-              {isSwitchingChain ? "Switching..." : `Switch to ${APP_CHAIN.name}`}
+              {isSwitchingChain
+                ? "Switching..."
+                : `Switch to ${APP_CHAIN.name}`}
             </motion.button>
           </motion.div>
         )}
@@ -500,58 +697,80 @@ const UserDashboard = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="mlc-card-elevated">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Total MLC</span>
+                  <span className="text-sm text-muted-foreground">
+                    Total MLC
+                  </span>
                   <Coins className="w-4 h-4 text-primary" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">
-                  {!isWalletReady ? "—" :
-                    userVestedAmount === undefined ? "Loading..." :
-                      stats.totalMLC.toLocaleString()}
+                  {!isWalletReady
+                    ? "—"
+                    : userVestedAmount === undefined
+                      ? "Loading..."
+                      : stats.totalMLC.toLocaleString()}
                 </p>
                 <p className="text-xs text-success mt-1">
-                  {!isWalletReady ? "Connect wallet" :
-                    userVestedAmount === undefined ? "Fetching data..." :
-                      "+5.2% value"}
+                  {!isWalletReady
+                    ? "Connect wallet"
+                    : userVestedAmount === undefined
+                      ? "Fetching data..."
+                      : "+5.2% value"}
                 </p>
               </div>
               <div className="mlc-card-elevated">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Locked Tokens</span>
+                  <span className="text-sm text-muted-foreground">
+                    Locked Tokens
+                  </span>
                   <Shield className="w-4 h-4 text-warning" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">
-                  {!isWalletReady ? "—" :
-                    userVestedAmount === undefined ? "Loading..." :
-                      stats.lockedTokens.toLocaleString()}
+                  {!isWalletReady
+                    ? "—"
+                    : userVestedAmount === undefined
+                      ? "Loading..."
+                      : stats.lockedTokens.toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {!isWalletReady ? "Connect wallet" :
-                    userVestedAmount === undefined ? "Fetching data..." :
-                      "Presale"}
+                  {!isWalletReady
+                    ? "Connect wallet"
+                    : userVestedAmount === undefined
+                      ? "Fetching data..."
+                      : "Presale"}
                 </p>
               </div>
               <div className="mlc-card-elevated">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">USDC Balance</span>
+                  <span className="text-sm text-muted-foreground">
+                    USDC Balance
+                  </span>
                   <Wallet className="w-4 h-4 text-success" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">
-                  {!isWalletReady ? "—" :
-                    usdcBalance === undefined ? "Loading..." :
-                      `${stats.usdcBalance.toFixed(2)}`}
+                  {!isWalletReady
+                    ? "—"
+                    : usdcBalance === undefined
+                      ? "Loading..."
+                      : `${stats.usdcBalance.toFixed(2)}`}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {!isWalletReady ? "Connect wallet" :
-                    usdcBalance === undefined ? "Fetching data..." :
-                      "Available"}
+                  {!isWalletReady
+                    ? "Connect wallet"
+                    : usdcBalance === undefined
+                      ? "Fetching data..."
+                      : "Available"}
                 </p>
               </div>
               <div className="mlc-card-elevated">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Referrals</span>
+                  <span className="text-sm text-muted-foreground">
+                    Referrals
+                  </span>
                   <Users className="w-4 h-4 text-primary" />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{stats.referrals}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {stats.referrals}
+                </p>
                 <p className="text-xs text-primary mt-1">Active</p>
               </div>
             </div>
@@ -568,8 +787,12 @@ const UserDashboard = () => {
                   <Gamepad2 className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-foreground">Launch Simulation</p>
-                  <p className="text-sm text-muted-foreground">Start earning rewards</p>
+                  <p className="font-semibold text-foreground">
+                    Launch Simulation
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Start earning rewards
+                  </p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </motion.button>
@@ -594,7 +817,9 @@ const UserDashboard = () => {
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold text-foreground">Claim Rewards</p>
-                  <p className="text-sm text-muted-foreground">{stats.pendingRewards} points pending</p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.pendingRewards} points pending
+                  </p>
                 </div>
                 <Sparkles className="w-5 h-5 text-success opacity-0 group-hover:opacity-100 transition-opacity" />
               </motion.button>
@@ -612,8 +837,12 @@ const UserDashboard = () => {
                       <Users className="w-6 h-6 text-warning" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-foreground">Share & Earn</p>
-                      <p className="text-sm text-muted-foreground">Invite friends, earn rewards</p>
+                      <p className="font-semibold text-foreground">
+                        Share & Earn
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Invite friends, earn rewards
+                      </p>
                     </div>
                     <Zap className="w-5 h-5 text-warning animate-pulse" />
                   </div>
@@ -622,15 +851,23 @@ const UserDashboard = () => {
                   <div className="mt-4 p-3 rounded-xl bg-secondary/80 border border-border">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs text-muted-foreground">Your Referral Code</p>
-                        <p className="text-lg font-bold text-foreground font-mono">{referralCode}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Your Referral Code
+                        </p>
+                        <p className="text-lg font-bold text-foreground font-mono">
+                          {referralCode}
+                        </p>
                       </div>
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={handleCopyCode}
                         className="px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium flex items-center gap-2"
                       >
-                        {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        {copied ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
                         {copied ? "Copied!" : "Copy"}
                       </motion.button>
                     </div>
@@ -655,8 +892,12 @@ const UserDashboard = () => {
             {/* Recent Activity */}
             <div className="mlc-card-elevated">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
-                <button className="text-sm text-primary hover:underline">View all</button>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Recent Activity
+                </h3>
+                <button className="text-sm text-primary hover:underline">
+                  View all
+                </button>
               </div>
               <div className="space-y-0">
                 {!isWalletReady ? (
@@ -681,14 +922,25 @@ const UserDashboard = () => {
                     const mapping = ACTIVITY_ICON_MAP[activity.activityType];
                     const IconComponent = mapping.icon;
                     return (
-                      <div key={activity.id} className="flex items-center justify-between py-4 border-b border-border last:border-0">
+                      <div
+                        key={activity.id}
+                        className="flex items-center justify-between py-4 border-b border-border last:border-0"
+                      >
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${mapping.bg}`}>
-                            <IconComponent className={`w-5 h-5 ${mapping.color}`} />
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center ${mapping.bg}`}
+                          >
+                            <IconComponent
+                              className={`w-5 h-5 ${mapping.color}`}
+                            />
                           </div>
                           <div>
-                            <p className="font-medium text-foreground">{activity.action}</p>
-                            <p className="text-sm text-muted-foreground">{formatRelativeTime(activity.timestamp)}</p>
+                            <p className="font-medium text-foreground">
+                              {activity.action}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatRelativeTime(activity.timestamp)}
+                            </p>
                           </div>
                         </div>
                         <span className="text-sm font-semibold text-success">
@@ -753,20 +1005,34 @@ const UserDashboard = () => {
                             <Trophy className="w-6 h-6 text-primary" />
                           </div>
                           <div>
-                            <p className="font-semibold text-foreground">{league.name}</p>
-                            <p className="text-xs text-muted-foreground">{league.sport} · {league.type} · {league.format}</p>
+                            <p className="font-semibold text-foreground">
+                              {league.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {league.sport} · {league.type} · {league.format}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-center">
-                            <p className="text-lg font-bold text-foreground">#{league.rank}</p>
-                            <p className="text-xs text-muted-foreground">Rank</p>
+                            <p className="text-lg font-bold text-foreground">
+                              #{league.rank}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Rank
+                            </p>
                           </div>
                           <div className="text-center">
-                            <p className="text-lg font-bold text-success">{league.wins}W</p>
-                            <p className="text-xs text-muted-foreground">/ {league.totalMatches}</p>
+                            <p className="text-lg font-bold text-success">
+                              {league.wins}W
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              / {league.totalMatches}
+                            </p>
                           </div>
-                          <span className="px-3 py-1 rounded-full bg-success/10 text-success text-xs font-semibold">Active</span>
+                          <span className="px-3 py-1 rounded-full bg-success/10 text-success text-xs font-semibold">
+                            Active
+                          </span>
                         </div>
                       </div>
                     </motion.div>
@@ -795,12 +1061,25 @@ const UserDashboard = () => {
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="font-semibold text-foreground">{league.name}</p>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${league.status === "Open" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
-                              }`}>{league.status}</span>
+                            <p className="font-semibold text-foreground">
+                              {league.name}
+                            </p>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                league.status === "Open"
+                                  ? "bg-success/10 text-success"
+                                  : "bg-warning/10 text-warning"
+                              }`}
+                            >
+                              {league.status}
+                            </span>
                           </div>
-                          <p className="text-xs text-muted-foreground">{league.sport} · {league.type} · by {league.creator}</p>
-                          <p className="text-sm text-muted-foreground mt-1">{league.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {league.sport} · {league.type} · by {league.creator}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {league.description}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -809,32 +1088,56 @@ const UserDashboard = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                       <div className="p-2 rounded-lg bg-secondary/50 text-center">
                         <p className="text-xs text-muted-foreground">Players</p>
-                        <p className="text-sm font-bold text-foreground">{league.members.toLocaleString()} / {league.maxMembers.toLocaleString()}</p>
+                        <p className="text-sm font-bold text-foreground">
+                          {league.members.toLocaleString()} /{" "}
+                          {league.maxMembers.toLocaleString()}
+                        </p>
                       </div>
                       <div className="p-2 rounded-lg bg-secondary/50 text-center">
-                        <p className="text-xs text-muted-foreground">Entry Fee</p>
-                        <p className="text-sm font-bold text-foreground">{league.entryFee > 0 ? `${league.entryFee} MLC` : "Free"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Entry Fee
+                        </p>
+                        <p className="text-sm font-bold text-foreground">
+                          {league.entryFee > 0
+                            ? `${league.entryFee} MLC`
+                            : "Free"}
+                        </p>
                       </div>
                       <div className="p-2 rounded-lg bg-success/10 text-center">
-                        <p className="text-xs text-muted-foreground">Prize Pool</p>
-                        <p className="text-sm font-bold text-success">{league.prizePool.toLocaleString()} MLC</p>
+                        <p className="text-xs text-muted-foreground">
+                          Prize Pool
+                        </p>
+                        <p className="text-sm font-bold text-success">
+                          {league.prizePool.toLocaleString()} MLC
+                        </p>
                       </div>
                       <div className="p-2 rounded-lg bg-secondary/50 text-center">
                         <p className="text-xs text-muted-foreground">Format</p>
-                        <p className="text-sm font-bold text-foreground">{league.format}</p>
+                        <p className="text-sm font-bold text-foreground">
+                          {league.format}
+                        </p>
                       </div>
                     </div>
 
                     {/* Fill Bar */}
                     <div className="mb-3">
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>{league.members} / {league.maxMembers} players</span>
-                        <span>{Math.round((league.members / league.maxMembers) * 100)}% filled</span>
+                        <span>
+                          {league.members} / {league.maxMembers} players
+                        </span>
+                        <span>
+                          {Math.round(
+                            (league.members / league.maxMembers) * 100,
+                          )}
+                          % filled
+                        </span>
                       </div>
                       <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
                         <div
                           className={`h-full rounded-full ${league.status === "Full" ? "bg-warning" : "bg-primary"}`}
-                          style={{ width: `${(league.members / league.maxMembers) * 100}%` }}
+                          style={{
+                            width: `${(league.members / league.maxMembers) * 100}%`,
+                          }}
                         />
                       </div>
                     </div>
@@ -842,19 +1145,26 @@ const UserDashboard = () => {
                     {/* Footer */}
                     <div className="flex items-center justify-between pt-3 border-t border-border">
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {league.startDate}</span>
-                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {league.duration}</span>
-                        <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> {league.region}</span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {league.startDate}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {league.duration}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Shield className="w-3 h-3" /> {league.region}
+                        </span>
                       </div>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleJoinLeague(league)}
                         disabled={league.status === "Full"}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${league.status === "Full"
-                          ? "bg-secondary text-muted-foreground cursor-not-allowed"
-                          : "mlc-gradient-bg text-primary-foreground"
-                          }`}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                          league.status === "Full"
+                            ? "bg-secondary text-muted-foreground cursor-not-allowed"
+                            : "mlc-gradient-bg text-primary-foreground"
+                        }`}
                       >
                         {league.status === "Full" ? "Full" : "Join League"}
                       </motion.button>
@@ -897,25 +1207,35 @@ const UserDashboard = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="mlc-card">
                 <p className="text-sm text-muted-foreground">Total Points</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{stats.totalPoints.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-foreground mt-1">
+                  {stats.totalPoints.toLocaleString()}
+                </p>
               </div>
               <div className="mlc-card">
                 <p className="text-sm text-muted-foreground">Pending Rewards</p>
-                <p className="text-2xl font-bold text-success mt-1">{stats.pendingRewards}</p>
+                <p className="text-2xl font-bold text-success mt-1">
+                  {stats.pendingRewards}
+                </p>
               </div>
               <div className="mlc-card">
                 <p className="text-sm text-muted-foreground">Total Referrals</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{stats.referrals}</p>
+                <p className="text-2xl font-bold text-foreground mt-1">
+                  {stats.referrals}
+                </p>
               </div>
               <div className="mlc-card">
-                <p className="text-sm text-muted-foreground">Referral Earnings</p>
+                <p className="text-sm text-muted-foreground">
+                  Referral Earnings
+                </p>
                 <p className="text-2xl font-bold text-primary mt-1">125 MLC</p>
               </div>
             </div>
 
             {/* Referral Link */}
             <div className="mlc-card-elevated">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Your Referral Link</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">
+                Your Referral Link
+              </h3>
               <div className="flex items-center gap-3">
                 <input
                   type="text"
@@ -927,10 +1247,17 @@ const UserDashboard = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleCopy}
-                  className={`px-6 py-3 rounded-xl font-medium transition-colors ${copied ? "bg-success text-success-foreground" : "bg-primary text-primary-foreground"
-                    }`}
+                  className={`px-6 py-3 rounded-xl font-medium transition-colors ${
+                    copied
+                      ? "bg-success text-success-foreground"
+                      : "bg-primary text-primary-foreground"
+                  }`}
                 >
-                  {copied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  {copied ? (
+                    <CheckCircle className="w-5 h-5" />
+                  ) : (
+                    <Copy className="w-5 h-5" />
+                  )}
                 </motion.button>
               </div>
               <div className="grid grid-cols-3 gap-4 mt-4">
@@ -939,11 +1266,15 @@ const UserDashboard = () => {
                   <p className="text-lg font-bold text-primary">+50 Points</p>
                 </div>
                 <div className="p-3 rounded-xl bg-secondary text-center">
-                  <p className="text-sm text-muted-foreground">Purchase Bonus</p>
+                  <p className="text-sm text-muted-foreground">
+                    Purchase Bonus
+                  </p>
                   <p className="text-lg font-bold text-success">+5% MLC</p>
                 </div>
                 <div className="p-3 rounded-xl bg-secondary text-center">
-                  <p className="text-sm text-muted-foreground">Simulation Bonus</p>
+                  <p className="text-sm text-muted-foreground">
+                    Simulation Bonus
+                  </p>
                   <p className="text-lg font-bold text-warning">+25 Points</p>
                 </div>
               </div>
@@ -956,24 +1287,41 @@ const UserDashboard = () => {
                 </h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">🥉 1-5 Referrals</span>
-                    <span className="font-medium text-foreground">5% bonus on their purchases</span>
+                    <span className="text-muted-foreground">
+                      🥉 1-5 Referrals
+                    </span>
+                    <span className="font-medium text-foreground">
+                      5% bonus on their purchases
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">🥈 6-15 Referrals</span>
-                    <span className="font-medium text-foreground">7% bonus + 100 bonus points</span>
+                    <span className="text-muted-foreground">
+                      🥈 6-15 Referrals
+                    </span>
+                    <span className="font-medium text-foreground">
+                      7% bonus + 100 bonus points
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">🥇 16-50 Referrals</span>
-                    <span className="font-medium text-foreground">10% bonus + 500 bonus points</span>
+                    <span className="text-muted-foreground">
+                      🥇 16-50 Referrals
+                    </span>
+                    <span className="font-medium text-foreground">
+                      10% bonus + 500 bonus points
+                    </span>
                   </div>
                   <div className="flex justify-between items-center py-2">
-                    <span className="text-muted-foreground">💎 50+ Referrals</span>
-                    <span className="font-medium text-success">15% bonus + VIP Status</span>
+                    <span className="text-muted-foreground">
+                      💎 50+ Referrals
+                    </span>
+                    <span className="font-medium text-success">
+                      15% bonus + VIP Status
+                    </span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-3">
-                  Earn a percentage of MLC for every purchase your referrals make, plus bonus points for each signup!
+                  Earn a percentage of MLC for every purchase your referrals
+                  make, plus bonus points for each signup!
                 </p>
               </div>
             </div>
@@ -982,9 +1330,15 @@ const UserDashboard = () => {
             <div className="mlc-card-elevated bg-gradient-to-r from-success/10 to-primary/10 border-success/30">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">Pending Rewards</h3>
-                  <p className="text-3xl font-bold text-success mt-2">{stats.pendingRewards} Points</p>
-                  <p className="text-sm text-muted-foreground mt-1">Available to claim</p>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Pending Rewards
+                  </h3>
+                  <p className="text-3xl font-bold text-success mt-2">
+                    {stats.pendingRewards} Points
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Available to claim
+                  </p>
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -999,20 +1353,31 @@ const UserDashboard = () => {
 
             {/* Referral History */}
             <div className="mlc-card-elevated">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Referral History</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">
+                Referral History
+              </h3>
               <div className="space-y-0">
                 {referralHistory.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between py-4 border-b border-border last:border-0">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between py-4 border-b border-border last:border-0"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
                         <User className="w-5 h-5 text-muted-foreground" />
                       </div>
                       <div>
-                        <p className="font-medium text-foreground">{item.user}</p>
-                        <p className="text-sm text-muted-foreground">{item.action} • {item.date}</p>
+                        <p className="font-medium text-foreground">
+                          {item.user}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {item.action} • {item.date}
+                        </p>
                       </div>
                     </div>
-                    <span className="text-sm font-semibold text-success">{item.reward}</span>
+                    <span className="text-sm font-semibold text-success">
+                      {item.reward}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -1032,9 +1397,12 @@ const UserDashboard = () => {
               <div className="w-20 h-20 rounded-2xl mlc-gradient-bg flex items-center justify-center mx-auto mb-6">
                 <Gamepad2 className="w-10 h-10 text-primary-foreground" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">Sports Simulations Hub</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Sports Simulations Hub
+              </h2>
               <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-                Run AI-powered sports simulations, join leagues, and earn rewards through active participation.
+                Run AI-powered sports simulations, join leagues, and earn
+                rewards through active participation.
               </p>
               <motion.button
                 whileHover={{ scale: 1.02 }}
@@ -1077,8 +1445,12 @@ const UserDashboard = () => {
             <div className="mlc-card-elevated">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">Bank Transfer Submissions</h3>
-                  <p className="text-sm text-muted-foreground">Track the status of your bank transfer verifications</p>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Bank Transfer Submissions
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Track the status of your bank transfer verifications
+                  </p>
                 </div>
                 <Building2 className="w-5 h-5 text-muted-foreground" />
               </div>
@@ -1091,28 +1463,43 @@ const UserDashboard = () => {
                 <div className="py-10 flex justify-center">
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
                     className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full"
                   />
                 </div>
               ) : bankTransferData.length === 0 ? (
                 <div className="py-10 text-center">
                   <Building2 className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-                  <p className="text-sm text-muted-foreground">No bank transfers submitted yet.</p>
-                  <p className="text-xs text-muted-foreground mt-1">Use the Bank / Wire Transfer option when purchasing MLC.</p>
+                  <p className="text-sm text-muted-foreground">
+                    No bank transfers submitted yet.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Use the Bank / Wire Transfer option when purchasing MLC.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-0 divide-y divide-border">
                   {bankTransferData.map((transfer) => (
-                    <div key={transfer.id} className="py-4 flex items-start gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                        transfer.status === 'Verified' ? 'bg-success/10' :
-                        transfer.status === 'Rejected' ? 'bg-destructive/10' :
-                        'bg-warning/10'
-                      }`}>
-                        {transfer.status === 'Verified' ? (
+                    <div
+                      key={transfer.id}
+                      className="py-4 flex items-start gap-4"
+                    >
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          transfer.status === "Verified"
+                            ? "bg-success/10"
+                            : transfer.status === "Rejected"
+                              ? "bg-destructive/10"
+                              : "bg-warning/10"
+                        }`}
+                      >
+                        {transfer.status === "Verified" ? (
                           <CheckCircle className="w-5 h-5 text-success" />
-                        ) : transfer.status === 'Rejected' ? (
+                        ) : transfer.status === "Rejected" ? (
                           <X className="w-5 h-5 text-destructive" />
                         ) : (
                           <Clock className="w-5 h-5 text-warning" />
@@ -1120,12 +1507,18 @@ const UserDashboard = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <p className="font-medium text-foreground text-sm">${transfer.amount.toLocaleString()} USD</p>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            transfer.status === 'Verified' ? 'bg-success/10 text-success' :
-                            transfer.status === 'Rejected' ? 'bg-destructive/10 text-destructive' :
-                            'bg-warning/10 text-warning'
-                          }`}>
+                          <p className="font-medium text-foreground text-sm">
+                            ${transfer.amount.toLocaleString()} USD
+                          </p>
+                          <span
+                            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              transfer.status === "Verified"
+                                ? "bg-success/10 text-success"
+                                : transfer.status === "Rejected"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-warning/10 text-warning"
+                            }`}
+                          >
                             {transfer.status}
                           </span>
                         </div>
@@ -1133,10 +1526,13 @@ const UserDashboard = () => {
                           {transfer.senderName} · {transfer.bankName}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Ref: {transfer.transactionRef} · {new Date(transfer.createdAt).toLocaleDateString()}
+                          Ref: {transfer.transactionRef} ·{" "}
+                          {new Date(transfer.createdAt).toLocaleDateString()}
                         </p>
                         {transfer.verificationNote && (
-                          <p className="text-xs text-muted-foreground mt-1 italic">"{transfer.verificationNote}"</p>
+                          <p className="text-xs text-muted-foreground mt-1 italic">
+                            "{transfer.verificationNote}"
+                          </p>
                         )}
                         {transfer.proofUrl && (
                           <a
@@ -1194,8 +1590,12 @@ const UserDashboard = () => {
                           <Gift className="w-6 h-6 text-success" />
                         </div>
                         <div>
-                          <h2 className="text-xl font-semibold text-foreground">Claim Rewards</h2>
-                          <p className="text-sm text-muted-foreground">Convert points to MLC</p>
+                          <h2 className="text-xl font-semibold text-foreground">
+                            Claim Rewards
+                          </h2>
+                          <p className="text-sm text-muted-foreground">
+                            Convert points to MLC
+                          </p>
                         </div>
                       </div>
                       {!isClaiming && (
@@ -1210,23 +1610,39 @@ const UserDashboard = () => {
 
                     <div className="space-y-4">
                       <div className="p-4 rounded-xl bg-gradient-to-r from-success/10 to-primary/10 border border-success/20">
-                        <p className="text-sm text-muted-foreground">Available to Claim</p>
-                        <p className="text-3xl font-bold text-success mt-1">{stats.pendingRewards} Points</p>
+                        <p className="text-sm text-muted-foreground">
+                          Available to Claim
+                        </p>
+                        <p className="text-3xl font-bold text-success mt-1">
+                          {stats.pendingRewards} Points
+                        </p>
                       </div>
 
                       <div className="p-4 rounded-xl bg-secondary/50">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">Points to Claim</span>
-                          <span className="font-semibold text-foreground">{stats.pendingRewards}</span>
+                          <span className="text-sm text-muted-foreground">
+                            Points to Claim
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            {stats.pendingRewards}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">Conversion Rate</span>
-                          <span className="font-semibold text-foreground">100 Points = 1 MLC</span>
+                          <span className="text-sm text-muted-foreground">
+                            Conversion Rate
+                          </span>
+                          <span className="font-semibold text-foreground">
+                            100 Points = 1 MLC
+                          </span>
                         </div>
                         <div className="border-t border-border pt-2 mt-2">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-foreground">You'll Receive</span>
-                            <span className="text-lg font-bold text-primary">{(stats.pendingRewards / 100).toFixed(1)} MLC</span>
+                            <span className="text-sm font-medium text-foreground">
+                              You'll Receive
+                            </span>
+                            <span className="text-lg font-bold text-primary">
+                              {(stats.pendingRewards / 100).toFixed(1)} MLC
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1234,7 +1650,8 @@ const UserDashboard = () => {
                       <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
                         <p className="text-xs text-warning flex items-start gap-2">
                           <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                          Claimed MLC will be added to your locked balance and released after the presale ends.
+                          Claimed MLC will be added to your locked balance and
+                          released after the presale ends.
                         </p>
                       </div>
                     </div>
@@ -1250,7 +1667,11 @@ const UserDashboard = () => {
                         <>
                           <motion.div
                             animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            transition={{
+                              duration: 1,
+                              repeat: Infinity,
+                              ease: "linear",
+                            }}
                             className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full"
                           />
                           Processing...
@@ -1273,11 +1694,18 @@ const UserDashboard = () => {
                     >
                       <CheckCircle className="w-10 h-10 text-success" />
                     </motion.div>
-                    <h2 className="text-xl font-semibold text-foreground">Rewards Claimed!</h2>
+                    <h2 className="text-xl font-semibold text-foreground">
+                      Rewards Claimed!
+                    </h2>
                     <p className="text-muted-foreground mt-2">
-                      You've received <span className="font-bold text-primary">{(stats.pendingRewards / 100).toFixed(1)} MLC</span>
+                      You've received{" "}
+                      <span className="font-bold text-primary">
+                        {(stats.pendingRewards / 100).toFixed(1)} MLC
+                      </span>
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">Added to your locked balance</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Added to your locked balance
+                    </p>
 
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -1332,74 +1760,122 @@ const UserDashboard = () => {
                     </div>
                     <div>
                       <h2 className="text-xl font-semibold text-foreground">
-                        {joinStep === "joined" ? "You're In!" : selectedLeague.name}
+                        {joinStep === "joined"
+                          ? "You're In!"
+                          : selectedLeague.name}
                       </h2>
                       <p className="text-sm text-muted-foreground">
-                        {joinStep === "details" && `${selectedLeague.sport} · ${selectedLeague.type}`}
+                        {joinStep === "details" &&
+                          `${selectedLeague.sport} · ${selectedLeague.type}`}
                         {joinStep === "confirm" && "Confirm your entry"}
                         {joinStep === "joined" && "Welcome to the league!"}
                       </p>
                     </div>
                   </div>
-                  <button onClick={() => setShowJoinModal(false)} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                  <button
+                    onClick={() => setShowJoinModal(false)}
+                    className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                  >
                     <X className="w-5 h-5 text-muted-foreground" />
                   </button>
                 </div>
 
                 {joinStep === "details" && (
                   <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">{selectedLeague.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedLeague.description}
+                    </p>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3 rounded-xl bg-secondary/50">
                         <p className="text-xs text-muted-foreground">Format</p>
-                        <p className="text-sm font-bold text-foreground">{selectedLeague.format}</p>
+                        <p className="text-sm font-bold text-foreground">
+                          {selectedLeague.format}
+                        </p>
                       </div>
                       <div className="p-3 rounded-xl bg-secondary/50">
-                        <p className="text-xs text-muted-foreground">Duration</p>
-                        <p className="text-sm font-bold text-foreground">{selectedLeague.duration}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Duration
+                        </p>
+                        <p className="text-sm font-bold text-foreground">
+                          {selectedLeague.duration}
+                        </p>
                       </div>
                       <div className="p-3 rounded-xl bg-secondary/50">
                         <p className="text-xs text-muted-foreground">Players</p>
-                        <p className="text-sm font-bold text-foreground">{selectedLeague.members} / {selectedLeague.maxMembers}</p>
+                        <p className="text-sm font-bold text-foreground">
+                          {selectedLeague.members} / {selectedLeague.maxMembers}
+                        </p>
                       </div>
                       <div className="p-3 rounded-xl bg-secondary/50">
                         <p className="text-xs text-muted-foreground">Region</p>
-                        <p className="text-sm font-bold text-foreground">{selectedLeague.region}</p>
+                        <p className="text-sm font-bold text-foreground">
+                          {selectedLeague.region}
+                        </p>
                       </div>
                     </div>
 
                     <div className="p-4 rounded-xl bg-success/10 border border-success/20">
                       <div className="flex justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">Prize Pool</span>
-                        <span className="text-lg font-bold text-success">{selectedLeague.prizePool.toLocaleString()} MLC</span>
+                        <span className="text-sm text-muted-foreground">
+                          Prize Pool
+                        </span>
+                        <span className="text-lg font-bold text-success">
+                          {selectedLeague.prizePool.toLocaleString()} MLC
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">Entry Fee</span>
-                        <span className="text-sm font-bold text-foreground">{selectedLeague.entryFee > 0 ? `${selectedLeague.entryFee} MLC` : "Free"}</span>
+                        <span className="text-sm text-muted-foreground">
+                          Entry Fee
+                        </span>
+                        <span className="text-sm font-bold text-foreground">
+                          {selectedLeague.entryFee > 0
+                            ? `${selectedLeague.entryFee} MLC`
+                            : "Free"}
+                        </span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Starts {selectedLeague.startDate}</span>
-                      <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> by {selectedLeague.creator}</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" /> Starts{" "}
+                        {selectedLeague.startDate}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Shield className="w-3 h-3" /> by{" "}
+                        {selectedLeague.creator}
+                      </span>
                     </div>
 
                     {selectedLeague.wins !== null ? (
                       <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                        <p className="text-sm font-medium text-foreground mb-3">Your Stats</p>
+                        <p className="text-sm font-medium text-foreground mb-3">
+                          Your Stats
+                        </p>
                         <div className="grid grid-cols-3 gap-3">
                           <div className="text-center">
-                            <p className="text-xl font-bold text-primary">#{selectedLeague.rank}</p>
-                            <p className="text-xs text-muted-foreground">Rank</p>
+                            <p className="text-xl font-bold text-primary">
+                              #{selectedLeague.rank}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Rank
+                            </p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xl font-bold text-success">{selectedLeague.wins}</p>
-                            <p className="text-xs text-muted-foreground">Wins</p>
+                            <p className="text-xl font-bold text-success">
+                              {selectedLeague.wins}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Wins
+                            </p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xl font-bold text-foreground">{selectedLeague.totalMatches}</p>
-                            <p className="text-xs text-muted-foreground">Matches</p>
+                            <p className="text-xl font-bold text-foreground">
+                              {selectedLeague.totalMatches}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Matches
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -1411,10 +1887,16 @@ const UserDashboard = () => {
                         disabled={selectedLeague.status === "Full"}
                         className="w-full mlc-btn-primary flex items-center justify-center gap-2"
                       >
-                        {selectedLeague.status === "Full" ? "League Full" : (
+                        {selectedLeague.status === "Full" ? (
+                          "League Full"
+                        ) : (
                           <>
                             Join League
-                            {selectedLeague.entryFee > 0 && <span className="opacity-75">({selectedLeague.entryFee} MLC)</span>}
+                            {selectedLeague.entryFee > 0 && (
+                              <span className="opacity-75">
+                                ({selectedLeague.entryFee} MLC)
+                              </span>
+                            )}
                           </>
                         )}
                       </motion.button>
@@ -1427,30 +1909,54 @@ const UserDashboard = () => {
                     <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">League</span>
-                        <span className="font-semibold text-foreground">{selectedLeague.name}</span>
+                        <span className="font-semibold text-foreground">
+                          {selectedLeague.name}
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Entry Fee</span>
-                        <span className="font-bold text-foreground">{selectedLeague.entryFee > 0 ? `${selectedLeague.entryFee} MLC` : "Free"}</span>
+                        <span className="font-bold text-foreground">
+                          {selectedLeague.entryFee > 0
+                            ? `${selectedLeague.entryFee} MLC`
+                            : "Free"}
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Prize Pool</span>
-                        <span className="font-bold text-success">{selectedLeague.prizePool.toLocaleString()} MLC</span>
+                        <span className="text-muted-foreground">
+                          Prize Pool
+                        </span>
+                        <span className="font-bold text-success">
+                          {selectedLeague.prizePool.toLocaleString()} MLC
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Your Balance</span>
-                        <span className="font-medium text-foreground">{stats.totalMLC.toLocaleString()} MLC</span>
+                        <span className="text-muted-foreground">
+                          Your Balance
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {stats.totalMLC.toLocaleString()} MLC
+                        </span>
                       </div>
                       {selectedLeague.entryFee > 0 && (
                         <div className="border-t border-border pt-2 flex justify-between text-sm">
-                          <span className="text-muted-foreground">After Entry</span>
-                          <span className="font-bold text-foreground">{(stats.totalMLC - selectedLeague.entryFee).toLocaleString()} MLC</span>
+                          <span className="text-muted-foreground">
+                            After Entry
+                          </span>
+                          <span className="font-bold text-foreground">
+                            {(
+                              stats.totalMLC - selectedLeague.entryFee
+                            ).toLocaleString()}{" "}
+                            MLC
+                          </span>
                         </div>
                       )}
                     </div>
 
                     <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
-                      <p className="text-xs text-warning font-medium">Entry fee is non-refundable once the league starts. You can withdraw before the start date.</p>
+                      <p className="text-xs text-warning font-medium">
+                        Entry fee is non-refundable once the league starts. You
+                        can withdraw before the start date.
+                      </p>
                     </div>
 
                     <div className="flex gap-3">
@@ -1486,20 +1992,32 @@ const UserDashboard = () => {
                       <CheckCircle className="w-8 h-8 text-success" />
                     </motion.div>
                     <div>
-                      <p className="text-lg font-bold text-foreground">Welcome to {selectedLeague.name}!</p>
-                      <p className="text-sm text-muted-foreground">You're now registered. Good luck!</p>
+                      <p className="text-lg font-bold text-foreground">
+                        Welcome to {selectedLeague.name}!
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        You're now registered. Good luck!
+                      </p>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="p-3 rounded-xl bg-primary/10 text-center">
-                        <p className="text-lg font-bold text-primary">{selectedLeague.format}</p>
+                        <p className="text-lg font-bold text-primary">
+                          {selectedLeague.format}
+                        </p>
                         <p className="text-xs text-muted-foreground">Format</p>
                       </div>
                       <div className="p-3 rounded-xl bg-success/10 text-center">
-                        <p className="text-lg font-bold text-success">{selectedLeague.prizePool.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">Prize (MLC)</p>
+                        <p className="text-lg font-bold text-success">
+                          {selectedLeague.prizePool.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Prize (MLC)
+                        </p>
                       </div>
                       <div className="p-3 rounded-xl bg-warning/10 text-center">
-                        <p className="text-lg font-bold text-warning">{selectedLeague.startDate}</p>
+                        <p className="text-lg font-bold text-warning">
+                          {selectedLeague.startDate}
+                        </p>
                         <p className="text-xs text-muted-foreground">Starts</p>
                       </div>
                     </div>

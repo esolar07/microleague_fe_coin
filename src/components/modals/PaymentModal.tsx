@@ -40,6 +40,7 @@ import { fetchOnrampUrl } from "@/services/onramp";
 import { COINBASE_PROJECT_ID } from "@/config/onramp";
 import { formatBlockchainError } from "@/utils/formatError";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -106,6 +107,9 @@ const PaymentModal = ({
   const { openConnectModal } = useConnectModal();
   const { address, isConnected } = useAccount();
   const { user } = useAuth();
+  const walletAddress =
+    address ?? (user?.walletAddress as `0x${string}` | undefined);
+  const queryClient = useQueryClient();
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
 
@@ -186,27 +190,36 @@ const PaymentModal = ({
   const stageData = currentStage?.[1];
 
   // Extract vesting info from stage (values are in seconds)
-  const cliffSeconds = stageData ? Number(stageData.cliff ?? stageData[7] ?? 0) : 0;
-  const durationSeconds = stageData ? Number(stageData.duration ?? stageData[8] ?? 0) : 0;
-  const releaseIntervalSeconds = stageData ? Number(stageData.releaseInterval ?? stageData[9] ?? 0) : 0;
+  const cliffSeconds = stageData
+    ? Number(stageData.cliff ?? stageData[7] ?? 0)
+    : 0;
+  const durationSeconds = stageData
+    ? Number(stageData.duration ?? stageData[8] ?? 0)
+    : 0;
+  const releaseIntervalSeconds = stageData
+    ? Number(stageData.releaseInterval ?? stageData[9] ?? 0)
+    : 0;
 
   const formatDuration = (seconds: number): string => {
-    if (seconds === 0) return 'None';
+    if (seconds === 0) return "None";
     const days = Math.floor(seconds / 86400);
-    if (days >= 365) return `${Math.round(days / 365)} year${days >= 730 ? 's' : ''}`;
-    if (days >= 30) return `${Math.round(days / 30)} month${days >= 60 ? 's' : ''}`;
-    if (days > 0) return `${days} day${days > 1 ? 's' : ''}`;
+    if (days >= 365)
+      return `${Math.round(days / 365)} year${days >= 730 ? "s" : ""}`;
+    if (days >= 30)
+      return `${Math.round(days / 30)} month${days >= 60 ? "s" : ""}`;
+    if (days > 0) return `${days} day${days > 1 ? "s" : ""}`;
     const hours = Math.floor(seconds / 3600);
-    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""}`;
     return `${Math.floor(seconds / 60)} min`;
   };
 
   const cliffDisplay = formatDuration(cliffSeconds);
   const durationDisplay = formatDuration(durationSeconds);
   const releaseDisplay = formatDuration(releaseIntervalSeconds);
-  const numReleases = releaseIntervalSeconds > 0 && durationSeconds > 0
-    ? Math.floor(durationSeconds / releaseIntervalSeconds)
-    : 0;
+  const numReleases =
+    releaseIntervalSeconds > 0 && durationSeconds > 0
+      ? Math.floor(durationSeconds / releaseIntervalSeconds)
+      : 0;
   const unlockPercent = numReleases > 0 ? Math.round(100 / numReleases) : 100;
 
   // Stable args array — only changes when stageId or requiredUsdc actually change
@@ -335,11 +348,10 @@ const PaymentModal = ({
       setStep("success");
     } catch (error) {
       const isInsufficientBalance =
-        (error instanceof Error && (
-          error.message.includes("Insufficient balance") ||
-          error.message.includes("insufficient balance") ||
-          error.message.includes("Transaction creation failed")
-        )) ||
+        (error instanceof Error &&
+          (error.message.includes("Insufficient balance") ||
+            error.message.includes("insufficient balance") ||
+            error.message.includes("Transaction creation failed"))) ||
         (error as any)?.cause?.message?.includes("Insufficient balance");
 
       if (isInsufficientBalance) {
@@ -447,9 +459,18 @@ const PaymentModal = ({
 
   const handleBankUpload = async () => {
     if (!bankProofFile || !address) return;
-    if (!bankSenderName.trim()) { setBankError("Please enter your name"); return; }
-    if (!bankBankName.trim()) { setBankError("Please enter your bank name"); return; }
-    if (!bankTransactionRef.trim()) { setBankError("Please enter the transaction reference"); return; }
+    if (!bankSenderName.trim()) {
+      setBankError("Please enter your name");
+      return;
+    }
+    if (!bankBankName.trim()) {
+      setBankError("Please enter your bank name");
+      return;
+    }
+    if (!bankTransactionRef.trim()) {
+      setBankError("Please enter the transaction reference");
+      return;
+    }
 
     setBankError(null);
     setBankSubmitting(true);
@@ -465,9 +486,18 @@ const PaymentModal = ({
         notes: `Presale purchase of ${displayMlc.toLocaleString()} MLC`,
       });
       setBankTransferId(result.transferId);
+      // Invalidate bank transfers list so it refetches
+      queryClient.invalidateQueries({
+        queryKey: ["bank-transfers", walletAddress],
+      });
+      if (onTransactionSuccess) {
+        await onTransactionSuccess();
+      }
       setStep("success");
     } catch (err) {
-      setBankError(err instanceof Error ? err.message : "Failed to submit bank transfer");
+      setBankError(
+        err instanceof Error ? err.message : "Failed to submit bank transfer",
+      );
     } finally {
       setBankSubmitting(false);
     }
@@ -491,7 +521,7 @@ const PaymentModal = ({
       try {
         await SAFTService.downloadCertificate(txHash);
       } catch (error) {
-        console.error('Error downloading SAFT certificate:', error);
+        console.error("Error downloading SAFT certificate:", error);
       }
     }
     setStep("select");
@@ -521,7 +551,7 @@ const PaymentModal = ({
       try {
         await SAFTService.downloadCertificate(txHash);
       } catch (error) {
-        console.error('Error downloading SAFT certificate:', error);
+        console.error("Error downloading SAFT certificate:", error);
       }
     } else {
       // Fallback to using transaction reference
@@ -1105,7 +1135,9 @@ const PaymentModal = ({
 
                   <div className="space-y-3 mb-4">
                     <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Your Full Name *</label>
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        Your Full Name *
+                      </label>
                       <input
                         type="text"
                         value={bankSenderName}
@@ -1115,7 +1147,9 @@ const PaymentModal = ({
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Your Bank Name *</label>
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        Your Bank Name *
+                      </label>
                       <input
                         type="text"
                         value={bankBankName}
@@ -1125,7 +1159,9 @@ const PaymentModal = ({
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Transaction Reference *</label>
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        Transaction Reference *
+                      </label>
                       <input
                         type="text"
                         value={bankTransactionRef}
@@ -1137,7 +1173,9 @@ const PaymentModal = ({
                   </div>
 
                   <div className="mb-4">
-                    <label className="text-xs text-muted-foreground mb-1 block">Proof of Transfer *</label>
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      Proof of Transfer *
+                    </label>
                     <label
                       className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors flex flex-col items-center gap-2 ${
                         bankProofFile
@@ -1157,14 +1195,22 @@ const PaymentModal = ({
                       {bankProofFile ? (
                         <>
                           <CheckCircle className="w-8 h-8 text-success" />
-                          <p className="font-medium text-foreground text-sm">{bankProofFile.name}</p>
-                          <p className="text-xs text-muted-foreground">{(bankProofFile.size / 1024).toFixed(0)} KB</p>
+                          <p className="font-medium text-foreground text-sm">
+                            {bankProofFile.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(bankProofFile.size / 1024).toFixed(0)} KB
+                          </p>
                         </>
                       ) : (
                         <>
                           <Upload className="w-8 h-8 text-muted-foreground" />
-                          <p className="font-medium text-foreground text-sm">Click to upload receipt</p>
-                          <p className="text-xs text-muted-foreground">PDF, PNG, or JPG (max 10MB)</p>
+                          <p className="font-medium text-foreground text-sm">
+                            Click to upload receipt
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            PDF, PNG, or JPG (max 10MB)
+                          </p>
                         </>
                       )}
                     </label>
@@ -1173,11 +1219,15 @@ const PaymentModal = ({
                   <div className="p-3 rounded-xl bg-secondary/50 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Payment Ref</span>
-                      <span className="font-mono text-foreground text-xs">{txRef}</span>
+                      <span className="font-mono text-foreground text-xs">
+                        {txRef}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm mt-1">
                       <span className="text-muted-foreground">Amount</span>
-                      <span className="font-semibold text-foreground">${numericAmount.toFixed(2)} USD</span>
+                      <span className="font-semibold text-foreground">
+                        ${numericAmount.toFixed(2)} USD
+                      </span>
                     </div>
                   </div>
 
@@ -1195,7 +1245,10 @@ const PaymentModal = ({
                     className="w-full mlc-btn-primary flex items-center justify-center gap-2 disabled:opacity-60"
                   >
                     {bankSubmitting ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />{" "}
+                        Submitting...
+                      </>
                     ) : (
                       "Submit Transfer"
                     )}
@@ -1228,13 +1281,25 @@ const PaymentModal = ({
                     <CheckCircle className="w-8 h-8 text-success" />
                   </motion.div>
                   <h2 className="text-xl font-semibold text-foreground">
-                    {bankTransferId ? "Transfer Submitted!" : "Purchase Successful!"}
+                    {bankTransferId
+                      ? "Transfer Submitted!"
+                      : "Purchase Successful!"}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-2 mb-4">
                     {bankTransferId ? (
-                      <>Transfer ID: <span className="font-semibold text-primary">{bankTransferId}</span></>
+                      <>
+                        Transfer ID:{" "}
+                        <span className="font-semibold text-primary">
+                          {bankTransferId}
+                        </span>
+                      </>
                     ) : (
-                      <>You've purchased{" "}<span className="font-semibold text-primary">{displayMlc.toLocaleString()} MLC</span></>
+                      <>
+                        You've purchased{" "}
+                        <span className="font-semibold text-primary">
+                          {displayMlc.toLocaleString()} MLC
+                        </span>
+                      </>
                     )}
                   </p>
                   {txHash && !bankTransferId && (
@@ -1249,63 +1314,74 @@ const PaymentModal = ({
                     <div className="p-4 rounded-xl bg-warning/10 border border-warning/20 mb-4 text-left">
                       <p className="text-sm text-warning flex items-start gap-2">
                         <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        Your transfer is pending manual verification. Tokens will be allocated within 1-3 business days after confirmation.
+                        Your transfer is pending manual verification. Tokens
+                        will be allocated within 1-3 business days after
+                        confirmation.
                       </p>
                     </div>
                   )}
 
                   {/* SAFT & Vesting Info — only for crypto purchases */}
-                  {!bankTransferId && <div className="text-left space-y-3 mb-6">
-                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                      <div className="flex items-start gap-3">
-                        <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            SAFT Certificate Generated
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Your Simple Agreement for Future Tokens is ready.
-                            This document confirms your token allocation and
-                            vesting terms.
-                          </p>
+                  {!bankTransferId && (
+                    <div className="text-left space-y-3 mb-6">
+                      <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                        <div className="flex items-start gap-3">
+                          <FileText className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              SAFT Certificate Generated
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Your Simple Agreement for Future Tokens is ready.
+                              This document confirms your token allocation and
+                              vesting terms.
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="p-4 rounded-xl bg-secondary/50 space-y-2">
-                      <p className="text-xs font-semibold text-foreground mb-2">
-                        Vesting Schedule
-                      </p>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          Cliff Period
-                        </span>
-                        <span className="text-foreground">{cliffDisplay}</span>
+                      <div className="p-4 rounded-xl bg-secondary/50 space-y-2">
+                        <p className="text-xs font-semibold text-foreground mb-2">
+                          Vesting Schedule
+                        </p>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            Cliff Period
+                          </span>
+                          <span className="text-foreground">
+                            {cliffDisplay}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            Vesting Duration
+                          </span>
+                          <span className="text-foreground">
+                            {durationDisplay}
+                            {releaseIntervalSeconds > 0
+                              ? ` (every ${releaseDisplay})`
+                              : ""}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            First Unlock
+                          </span>
+                          <span className="text-foreground">
+                            {unlockPercent}% after cliff
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          Vesting Duration
-                        </span>
-                        <span className="text-foreground">
-                          {durationDisplay}{releaseIntervalSeconds > 0 ? ` (every ${releaseDisplay})` : ''}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          First Unlock
-                        </span>
-                        <span className="text-foreground">{unlockPercent}% after cliff</span>
-                      </div>
-                    </div>
 
-                    <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
-                      <p className="text-xs text-warning flex items-start gap-2">
-                        <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        Your tokens are secured in audited smart contracts and
-                        will vest per the schedule above.
-                      </p>
+                      <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
+                        <p className="text-xs text-warning flex items-start gap-2">
+                          <Shield className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          Your tokens are secured in audited smart contracts and
+                          will vest per the schedule above.
+                        </p>
+                      </div>
                     </div>
-                  </div>}
+                  )}
 
                   <div className="space-y-3">
                     {!bankTransferId && (
@@ -1402,13 +1478,17 @@ const PaymentModal = ({
                           Price per Token
                         </span>
                         <span className="font-medium text-foreground">
-                          ${displayMlc > 0 ? (numericAmount / displayMlc).toFixed(4) : "—"}
+                          $
+                          {displayMlc > 0
+                            ? (numericAmount / displayMlc).toFixed(4)
+                            : "—"}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Vesting</span>
                         <span className="font-medium text-foreground">
-                          {durationDisplay}, every {releaseDisplay}, {cliffDisplay} cliff
+                          {durationDisplay}, every {releaseDisplay},{" "}
+                          {cliffDisplay} cliff
                         </span>
                       </div>
                     </div>
@@ -1417,7 +1497,8 @@ const PaymentModal = ({
                       <p className="text-xs text-muted-foreground">
                         This SAFT certificate confirms your token allocation
                         under the MicroLeague Presale Phase 1 terms. Tokens vest
-                        every {releaseDisplay} over {durationDisplay} with a {cliffDisplay} cliff period.
+                        every {releaseDisplay} over {durationDisplay} with a{" "}
+                        {cliffDisplay} cliff period.
                       </p>
                     </div>
                   </div>
