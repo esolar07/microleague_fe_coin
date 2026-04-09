@@ -1,16 +1,21 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut, Loader2 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import AuthModal from "@/components/modals/AuthModal";
 import { useAuth } from "@/hooks/use-auth";
+import { useDisconnect } from "wagmi";
+import { useSignOut } from "@coinbase/cdp-hooks";
 import logo from "@/assets/logo.webp";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const { isAuthenticated, logout } = useAuth();
+  const { disconnect } = useDisconnect();
+  const { signOut } = useSignOut();
   const navigate = useNavigate();
 
   const navLinks = [
@@ -31,6 +36,19 @@ const Header = () => {
   const handleAuthSuccess = () => {
     setShowAuthModal(false);
     navigate("/dashboard");
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await signOut();
+    } catch {
+      // session may already be expired
+    }
+    logout();
+    disconnect();
+    navigate("/");
+    setLoggingOut(false);
   };
 
   return (
@@ -65,10 +83,12 @@ const Header = () => {
                     Dashboard
                   </Link>
                   <button
-                    onClick={logout}
-                    className="text-sm px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-60"
                   >
-                    Logout
+                    {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+                    {loggingOut ? "Signing out..." : "Logout"}
                   </button>
                 </div>
               ) : (
@@ -115,10 +135,12 @@ const Header = () => {
                       Dashboard
                     </Link>
                     <button
-                      onClick={() => { logout(); setIsMenuOpen(false); }}
-                      className="text-sm text-center py-2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => { setIsMenuOpen(false); handleLogout(); }}
+                      disabled={loggingOut}
+                      className="flex items-center justify-center gap-1.5 text-sm py-2 px-3 rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-60"
                     >
-                      Logout
+                      {loggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
+                      {loggingOut ? "Signing out..." : "Logout & Disconnect"}
                     </button>
                   </>
                 ) : (

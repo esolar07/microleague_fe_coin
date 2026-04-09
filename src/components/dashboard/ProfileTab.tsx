@@ -14,6 +14,7 @@ import {
 } from "@/services/userProfile";
 import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
 import { useCurrentUser } from "@coinbase/cdp-hooks";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 const ProfileTab = () => {
   const { address } = useAccount();
@@ -137,17 +138,13 @@ const ProfileTab = () => {
         <div className="flex items-center gap-4 mb-6">
           {/* Avatar */}
           <div className="relative group">
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-              {profile?.avatar ? (
-                <img
-                  src={profile.avatar}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-10 h-10 text-primary" />
-              )}
-            </div>
+            <UserAvatar
+              avatar={profile?.avatar}
+              displayName={displayName}
+              email={email}
+              walletAddress={walletAddress}
+              size="lg"
+            />
             <label
               className="absolute inset-0 rounded-full bg-foreground/40 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity"
               aria-label="Upload avatar"

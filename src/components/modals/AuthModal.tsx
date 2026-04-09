@@ -9,6 +9,9 @@ import {
   Loader2,
   CheckCircle,
   AlertTriangle,
+  User,
+  Save,
+  AlertCircle,
 } from "lucide-react";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAccount, useChainId, useSignMessage, useSwitchChain } from "wagmi";
@@ -22,8 +25,10 @@ import {
   useEvmAccounts,
   useSignEvmMessage,
   useSignOut,
+  useCurrentUser,
 } from "@coinbase/cdp-hooks";
 import { SignInModal } from "@coinbase/cdp-react/components/SignInModal";
+import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -38,7 +43,8 @@ type AuthStep =
   | "coinbase-verify"
   | "verify"
   | "otp"
-  | "success";
+  | "success"
+  | "profile-setup";
 
 const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [step, setStep] = useState<AuthStep>("choose");
@@ -65,6 +71,22 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const coinbaseEvmAddress = evmAccounts?.[0]?.address ?? null;
   // Track whether Coinbase was already signed in when modal opened
   const wasSignedInOnOpen = useRef(false);
+
+  // Profile setup state
+  const [setupDisplayName, setSetupDisplayName] = useState("");
+  const [setupEmail, setSetupEmail] = useState("");
+  const [setupSaving, setSetupSaving] = useState(false);
+  const [setupSaveStatus, setSetupSaveStatus] = useState<"idle" | "success" | "error">("idle");
+  const [setupErrorMsg, setSetupErrorMsg] = useState("");
+  const { currentUser } = useCurrentUser();
+
+  const walletAddress = address ?? "";
+  const { data: profileData, isLoading: profileLoading, isError: profileError } = useUserProfile(isAuthenticated ? walletAddress || undefined : undefined);
+  const updateProfileMutation = useUpdateUserProfile(walletAddress);
+
+  // Check if profile is incomplete (missing display name or email)
+  const isProfileIncomplete = (profile: typeof profileData) =>
+    !profile?.displayName?.trim() || !profile?.email?.trim();
 
   // When modal opens, snapshot the current Coinbase sign-in state (only on open)
   useEffect(() => {
@@ -188,6 +210,9 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       });
 
       login({ token: result.token, user: result.user });
+      // Pre-fill email from Coinbase if available
+      const cbEmail = currentUser?.authenticationMethods?.email?.email ?? "";
+      if (cbEmail) setSetupEmail(cbEmail);
       setStep("success");
     } catch (error) {
       console.error("Coinbase auth error:", error);
@@ -752,27 +777,123 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 </div>
               )}
 
-              {/* Success */}
+              {/* Success — only shown when profile is already complete */}
               {step === "success" && (
-                <div className="py-8 text-center">
-                  <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="w-8 h-8 text-success" />
+                <SuccessOrSetup
+                  profileData={profileData}
+                  isLoading={profileLoading}
+                  isError={profileError}
+                  isProfileIncomplete={isProfileIncomplete}
+                  onSetup={() => setStep("profile-setup")}
+                  onSuccess={handleSuccess}
+                />
+              )}
+
+              {/* Profile Setup — shown for new users with incomplete profile */}
+              {step === "profile-setup" && (
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl mlc-gradient-bg flex items-center justify-center">
+                        <User className="w-5 h-5 text-primary-foreground" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-semibold text-foreground">Complete Your Profile</h2>
+                        <p className="text-sm text-muted-foreground">Just a few details to get started</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleClose}
+                      className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                    >
+                      <X className="w-5 h-5 text-muted-foreground" />
+                    </button>
                   </div>
-                  <h2 className="text-xl font-semibold text-foreground">
-                    You're All Set!
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-2 mb-6">
-                    Your account has been created successfully.
-                  </p>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleSuccess}
-                    className="w-full mlc-btn-primary"
-                  >
-                    Continue
-                  </motion.button>
-                </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="setup-display-name" className="text-sm font-medium text-foreground">
+                        Display Name
+                      </label>
+                      <input
+                        id="setup-display-name"
+                        type="text"
+                        value={setupDisplayName}
+                        onChange={(e) => setSetupDisplayName(e.target.value)}
+                        placeholder="Enter your display name"
+                        className="mlc-input mt-2"
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="setup-email" className="text-sm font-medium text-foreground">
+                        Email Address
+                      </label>
+                      <input
+                        id="setup-email"
+                        type="email"
+                        value={setupEmail}
+                        onChange={(e) => setSetupEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="mlc-input mt-2"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-6">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={async () => {
+                        if (!walletAddress) return;
+                        setSetupSaving(true);
+                        setSetupSaveStatus("idle");
+                        try {
+                          await updateProfileMutation.mutateAsync({
+                            displayName: setupDisplayName.trim(),
+                            email: setupEmail.trim(),
+                          });
+                          setSetupSaveStatus("success");
+                          setTimeout(() => handleSuccess(), 1000);
+                        } catch (err: any) {
+                          const msg = err?.message ?? "";
+                          setSetupErrorMsg(
+                            msg.toLowerCase().includes("email")
+                              ? "That email is already linked to another account."
+                              : "Failed to save. You can update this in your profile settings."
+                          );
+                          setSetupSaveStatus("error");
+                        } finally {
+                          setSetupSaving(false);
+                        }
+                      }}
+                      disabled={setupSaving || (!setupDisplayName.trim() && !setupEmail.trim())}
+                      className="flex-1 mlc-btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {setupSaving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : setupSaveStatus === "success" ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      {setupSaving ? "Saving..." : setupSaveStatus === "success" ? "Saved!" : "Save & Continue"}
+                    </motion.button>
+
+                    <button
+                      onClick={handleSuccess}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+                    >
+                      Skip
+                    </button>
+                  </div>
+
+                  {setupSaveStatus === "error" && (
+                    <p className="text-sm text-destructive flex items-center gap-1 mt-3">
+                      <AlertCircle className="w-4 h-4" /> {setupErrorMsg}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </motion.div>
@@ -781,5 +902,65 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     </AnimatePresence>
   );
 };
+
+// Helper: decides whether to show "You're All Set!" or redirect to profile setup
+function SuccessOrSetup({
+  profileData,
+  isLoading,
+  isError,
+  isProfileIncomplete,
+  onSetup,
+  onSuccess,
+}: {
+  profileData: { displayName?: string; email?: string } | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  isProfileIncomplete: (p: typeof profileData) => boolean;
+  onSetup: () => void;
+  onSuccess: () => void;
+}) {
+  useEffect(() => {
+    // 404 / any error = new user with no profile → go to setup
+    if (isError) {
+      onSetup();
+      return;
+    }
+    if (isLoading || profileData === undefined) return;
+    if (isProfileIncomplete(profileData)) {
+      onSetup();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileData, isLoading, isError]);
+
+  if (isLoading) {
+    return (
+      <div className="py-8 text-center">
+        <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+        <p className="text-sm text-muted-foreground">Loading your profile...</p>
+      </div>
+    );
+  }
+
+  // Profile is complete — show "You're All Set!"
+  return (
+    <div className="py-8 text-center">
+      <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
+        <CheckCircle className="w-8 h-8 text-success" />
+      </div>
+      <h2 className="text-xl font-semibold text-foreground">You're All Set!</h2>
+      <p className="text-sm text-muted-foreground mt-2 mb-6">
+        Welcome back to MicroLeague.
+      </p>
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={onSuccess}
+        className="w-full mlc-btn-primary"
+      >
+        Continue
+      </motion.button>
+    </div>
+  );
+}
 
 export default AuthModal;
