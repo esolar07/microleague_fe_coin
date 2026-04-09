@@ -53,8 +53,7 @@ export async function submitBankTransfer(
   data: BankTransferSubmission,
 ): Promise<BankTransferResult> {
   // Step 1: Upload proof to Cloudinary via main backend
-  const proofUrl = "";
-  // const proofUrl = await uploadProofFile(data.proofFile, data.walletAddress);
+  const proofUrl = await uploadProofFile(data.proofFile, data.walletAddress);
 
   // Step 2: Submit bank transfer via main backend proxy
   const response = await fetch(`${API_BASE_URL}/bank-transfers`, {
