@@ -192,7 +192,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     } catch (error) {
       console.error("Coinbase auth error:", error);
       setAuthError(
-        error instanceof Error ? error.message : "Coinbase sign-in failed"
+        error instanceof Error ? error.message : "Coinbase sign-in failed",
       );
       setStep("choose");
       try {
@@ -287,7 +287,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
         handleWalletSignIn();
       } catch (error) {
         setAuthError(
-          error instanceof Error ? error.message : "Failed to switch network"
+          error instanceof Error ? error.message : "Failed to switch network",
         );
       }
     })();
@@ -311,7 +311,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
     autoSignAttempted.current = true;
     handleWalletSignIn();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, step, chainId, isAuthenticated]);
 
   const handleBack = () => {
@@ -331,7 +331,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-foreground/20 z-50"
           />
 
           <motion.div
@@ -574,7 +574,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                                 setAuthError(
                                   error instanceof Error
                                     ? error.message
-                                    : "Failed to switch network"
+                                    : "Failed to switch network",
                                 );
                               }
                             }}

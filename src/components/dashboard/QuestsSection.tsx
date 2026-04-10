@@ -1,9 +1,22 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Gamepad2, Users, Share2, ShoppingCart, CheckCircle, Clock,
-  Coins, Star, ChevronRight, Sparkles, Trophy, Target, X,
-  Play, ArrowRight, PartyPopper
+  Gamepad2,
+  Users,
+  Share2,
+  ShoppingCart,
+  CheckCircle,
+  Clock,
+  Coins,
+  Star,
+  ChevronRight,
+  Sparkles,
+  Trophy,
+  Target,
+  X,
+  Play,
+  ArrowRight,
+  PartyPopper,
 } from "lucide-react";
 
 interface Quest {
@@ -22,9 +35,17 @@ interface Quest {
 }
 
 const categoryColors = {
-  onboarding: { bg: "bg-primary/10", text: "text-primary", label: "Getting Started" },
+  onboarding: {
+    bg: "bg-primary/10",
+    text: "text-primary",
+    label: "Getting Started",
+  },
   social: { bg: "bg-accent", text: "text-accent-foreground", label: "Social" },
-  engagement: { bg: "bg-warning/10", text: "text-warning", label: "Engagement" },
+  engagement: {
+    bg: "bg-warning/10",
+    text: "text-warning",
+    label: "Engagement",
+  },
   referral: { bg: "bg-success/10", text: "text-success", label: "Referral" },
 };
 
@@ -38,7 +59,8 @@ const initialQuests: Quest[] = [
   {
     id: "first-sim",
     title: "Run Your First Simulation",
-    description: "Launch any sports simulation to get started and earn your first reward.",
+    description:
+      "Launch any sports simulation to get started and earn your first reward.",
     reward: 100,
     rewardType: "MLC",
     icon: Gamepad2,
@@ -52,7 +74,8 @@ const initialQuests: Quest[] = [
   {
     id: "refer-signup",
     title: "Refer a Friend Who Signs Up",
-    description: "Share your referral link. When someone creates an account, you both earn rewards.",
+    description:
+      "Share your referral link. When someone creates an account, you both earn rewards.",
     reward: 150,
     rewardType: "Points",
     icon: Users,
@@ -66,7 +89,8 @@ const initialQuests: Quest[] = [
   {
     id: "refer-purchase",
     title: "Referral Makes a Purchase",
-    description: "When your referred friend buys MLC tokens, you get a bonus on top.",
+    description:
+      "When your referred friend buys MLC tokens, you get a bonus on top.",
     reward: 200,
     rewardType: "MLC",
     icon: ShoppingCart,
@@ -80,7 +104,8 @@ const initialQuests: Quest[] = [
   {
     id: "social-share",
     title: "Share MicroLeague on Social Media",
-    description: "Post about MicroLeague on X/Twitter and tag @MicroLeagueCoin to verify.",
+    description:
+      "Post about MicroLeague on X/Twitter and tag @MicroLeagueCoin to verify.",
     reward: 75,
     rewardType: "Points",
     icon: Share2,
@@ -94,7 +119,8 @@ const initialQuests: Quest[] = [
   {
     id: "five-sims",
     title: "Complete 5 Simulations",
-    description: "Run five different simulations to show you're serious about the platform.",
+    description:
+      "Run five different simulations to show you're serious about the platform.",
     reward: 500,
     rewardType: "MLC",
     icon: Target,
@@ -108,7 +134,8 @@ const initialQuests: Quest[] = [
   {
     id: "buy-mlc",
     title: "Purchase MLC Tokens",
-    description: "Buy any amount of MLC during the presale to unlock this quest.",
+    description:
+      "Buy any amount of MLC during the presale to unlock this quest.",
     reward: 100,
     rewardType: "Points",
     icon: Coins,
@@ -122,7 +149,8 @@ const initialQuests: Quest[] = [
   {
     id: "refer-three",
     title: "Refer 3 Friends",
-    description: "Bring three friends to MicroLeague. Each signup counts toward this quest.",
+    description:
+      "Bring three friends to MicroLeague. Each signup counts toward this quest.",
     reward: 300,
     rewardType: "MLC",
     icon: Trophy,
@@ -138,24 +166,35 @@ const initialQuests: Quest[] = [
 const QuestsSection = () => {
   const [quests, setQuests] = useState<Quest[]>(initialQuests);
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
-  const [actionStep, setActionStep] = useState<"detail" | "starting" | "progressing" | "completing" | "claiming" | "done">("detail");
-  const [filter, setFilter] = useState<"all" | "available" | "in_progress" | "completed">("all");
-  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [actionStep, setActionStep] = useState<
+    "detail" | "starting" | "progressing" | "completing" | "claiming" | "done"
+  >("detail");
+  const [filter, setFilter] = useState<
+    "all" | "available" | "in_progress" | "completed"
+  >("all");
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
 
-  const totalXP = quests.filter(q => q.status === "claimed").reduce((sum, q) => sum + q.xp, 0);
+  const totalXP = quests
+    .filter((q) => q.status === "claimed")
+    .reduce((sum, q) => sum + q.xp, 0);
   const level = Math.floor(totalXP / 200) + 1;
   const xpToNext = 200 - (totalXP % 200);
 
-  const filtered = quests.filter(q => {
+  const filtered = quests.filter((q) => {
     if (filter === "all") return true;
-    if (filter === "completed") return q.status === "completed" || q.status === "claimed";
+    if (filter === "completed")
+      return q.status === "completed" || q.status === "claimed";
     return q.status === filter;
   });
 
   const updateQuest = (id: string, updates: Partial<Quest>) => {
-    setQuests(prev => prev.map(q => q.id === id ? { ...q, ...updates } : q));
+    setQuests((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, ...updates } : q)),
+    );
     if (selectedQuest?.id === id) {
-      setSelectedQuest(prev => prev ? { ...prev, ...updates } : null);
+      setSelectedQuest((prev) => (prev ? { ...prev, ...updates } : null));
     }
   };
 
@@ -174,7 +213,10 @@ const QuestsSection = () => {
           clearInterval(progressIntervalRef.current!);
           progressIntervalRef.current = null;
           setTimeout(() => {
-            updateQuest(selectedQuest.id, { status: "completed", progress: selectedQuest.total });
+            updateQuest(selectedQuest.id, {
+              status: "completed",
+              progress: selectedQuest.total,
+            });
             setActionStep("completing");
           }, 500);
         }
@@ -215,8 +257,12 @@ const QuestsSection = () => {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Your Level</p>
-              <p className="text-2xl font-bold text-foreground">Level {level}</p>
-              <p className="text-xs text-muted-foreground">{xpToNext} XP to Level {level + 1}</p>
+              <p className="text-2xl font-bold text-foreground">
+                Level {level}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {xpToNext} XP to Level {level + 1}
+              </p>
             </div>
           </div>
           <div className="w-full sm:w-48">
@@ -292,32 +338,54 @@ const QuestsSection = () => {
             )}
 
             <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${categoryColors[quest.category].bg}`}>
-                <quest.icon className={`w-6 h-6 ${categoryColors[quest.category].text}`} />
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${categoryColors[quest.category].bg}`}
+              >
+                <quest.icon
+                  className={`w-6 h-6 ${categoryColors[quest.category].text}`}
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-xs font-medium ${categoryColors[quest.category].text}`}>
+                  <span
+                    className={`text-xs font-medium ${categoryColors[quest.category].text}`}
+                  >
                     {categoryColors[quest.category].label}
                   </span>
-                  <span className={`text-xs ${difficultyColors[quest.difficulty]}`}>
-                    {quest.difficulty === "easy" ? "★" : quest.difficulty === "medium" ? "★★" : "★★★"}
+                  <span
+                    className={`text-xs ${difficultyColors[quest.difficulty]}`}
+                  >
+                    {quest.difficulty === "easy"
+                      ? "★"
+                      : quest.difficulty === "medium"
+                        ? "★★"
+                        : "★★★"}
                   </span>
                 </div>
-                <h4 className="font-semibold text-foreground text-sm">{quest.title}</h4>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{quest.description}</p>
+                <h4 className="font-semibold text-foreground text-sm">
+                  {quest.title}
+                </h4>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                  {quest.description}
+                </p>
 
                 {/* Progress bar for in_progress */}
                 {quest.status === "in_progress" && (
                   <div className="mt-3">
                     <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>{quest.progress}/{quest.total}</span>
-                      <span>{Math.round((quest.progress / quest.total) * 100)}%</span>
+                      <span>
+                        {quest.progress}/{quest.total}
+                      </span>
+                      <span>
+                        {Math.round((quest.progress / quest.total) * 100)}%
+                      </span>
                     </div>
                     <div className="h-2 rounded-full bg-secondary overflow-hidden">
                       <motion.div
                         className="h-full rounded-full bg-primary"
-                        animate={{ width: `${(quest.progress / quest.total) * 100}%` }}
+                        animate={{
+                          width: `${(quest.progress / quest.total) * 100}%`,
+                        }}
                         transition={{ duration: 0.3 }}
                       />
                     </div>
@@ -331,7 +399,9 @@ const QuestsSection = () => {
                       +{quest.reward} {quest.rewardType}
                     </span>
                   </div>
-                  <span className="text-xs text-muted-foreground">+{quest.xp} XP</span>
+                  <span className="text-xs text-muted-foreground">
+                    +{quest.xp} XP
+                  </span>
                 </div>
               </div>
             </div>
@@ -347,8 +417,15 @@ const QuestsSection = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => { if (actionStep === "detail" || actionStep === "done" || actionStep === "completing") closeModal(); }}
-              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
+              onClick={() => {
+                if (
+                  actionStep === "detail" ||
+                  actionStep === "done" ||
+                  actionStep === "completing"
+                )
+                  closeModal();
+              }}
+              className="fixed inset-0 bg-foreground/20 z-50"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -362,14 +439,22 @@ const QuestsSection = () => {
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${categoryColors[selectedQuest.category].bg}`}>
-                          <selectedQuest.icon className={`w-6 h-6 ${categoryColors[selectedQuest.category].text}`} />
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center ${categoryColors[selectedQuest.category].bg}`}
+                        >
+                          <selectedQuest.icon
+                            className={`w-6 h-6 ${categoryColors[selectedQuest.category].text}`}
+                          />
                         </div>
                         <div>
-                          <p className={`text-xs font-medium ${categoryColors[selectedQuest.category].text}`}>
+                          <p
+                            className={`text-xs font-medium ${categoryColors[selectedQuest.category].text}`}
+                          >
                             {categoryColors[selectedQuest.category].label}
                           </p>
-                          <h3 className="font-semibold text-foreground">{selectedQuest.title}</h3>
+                          <h3 className="font-semibold text-foreground">
+                            {selectedQuest.title}
+                          </h3>
                         </div>
                       </div>
                       <button
@@ -380,26 +465,44 @@ const QuestsSection = () => {
                       </button>
                     </div>
 
-                    <p className="text-sm text-muted-foreground mb-4">{selectedQuest.description}</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {selectedQuest.description}
+                    </p>
 
                     <div className="p-4 rounded-xl bg-secondary/50 space-y-3 mb-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Reward</span>
-                        <span className="font-bold text-primary">+{selectedQuest.reward} {selectedQuest.rewardType}</span>
+                        <span className="text-sm text-muted-foreground">
+                          Reward
+                        </span>
+                        <span className="font-bold text-primary">
+                          +{selectedQuest.reward} {selectedQuest.rewardType}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">XP Earned</span>
-                        <span className="font-semibold text-foreground">+{selectedQuest.xp} XP</span>
+                        <span className="text-sm text-muted-foreground">
+                          XP Earned
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          +{selectedQuest.xp} XP
+                        </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Difficulty</span>
-                        <span className={`font-medium capitalize ${difficultyColors[selectedQuest.difficulty]}`}>
+                        <span className="text-sm text-muted-foreground">
+                          Difficulty
+                        </span>
+                        <span
+                          className={`font-medium capitalize ${difficultyColors[selectedQuest.difficulty]}`}
+                        >
                           {selectedQuest.difficulty}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Progress</span>
-                        <span className="font-semibold text-foreground">{selectedQuest.progress}/{selectedQuest.total}</span>
+                        <span className="text-sm text-muted-foreground">
+                          Progress
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {selectedQuest.progress}/{selectedQuest.total}
+                        </span>
                       </div>
                     </div>
 
@@ -408,7 +511,9 @@ const QuestsSection = () => {
                         <div className="h-3 rounded-full bg-secondary overflow-hidden">
                           <motion.div
                             className="h-full rounded-full bg-primary"
-                            animate={{ width: `${(selectedQuest.progress / selectedQuest.total) * 100}%` }}
+                            animate={{
+                              width: `${(selectedQuest.progress / selectedQuest.total) * 100}%`,
+                            }}
                           />
                         </div>
                       </div>
@@ -430,7 +535,8 @@ const QuestsSection = () => {
                       <div className="text-center py-3 rounded-xl bg-primary/5 border border-primary/20">
                         <p className="text-sm text-primary flex items-center justify-center gap-2">
                           <Clock className="w-4 h-4" />
-                          In progress: {selectedQuest.progress}/{selectedQuest.total}
+                          In progress: {selectedQuest.progress}/
+                          {selectedQuest.total}
                         </p>
                       </div>
                     )}
@@ -463,36 +569,64 @@ const QuestsSection = () => {
                   <div className="py-12 text-center">
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                       className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full mx-auto mb-6"
                     />
-                    <h3 className="text-lg font-semibold text-foreground">Starting Quest...</h3>
-                    <p className="text-sm text-muted-foreground mt-2">Initializing {selectedQuest.title}</p>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Starting Quest...
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Initializing {selectedQuest.title}
+                    </p>
                   </div>
                 )}
 
                 {/* Progressing with live updates */}
                 {actionStep === "progressing" && (
                   <div className="py-8 text-center">
-                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 ${categoryColors[selectedQuest.category].bg}`}>
-                      <selectedQuest.icon className={`w-8 h-8 ${categoryColors[selectedQuest.category].text}`} />
+                    <div
+                      className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 ${categoryColors[selectedQuest.category].bg}`}
+                    >
+                      <selectedQuest.icon
+                        className={`w-8 h-8 ${categoryColors[selectedQuest.category].text}`}
+                      />
                     </div>
-                    <h3 className="text-lg font-semibold text-foreground">Quest In Progress</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{selectedQuest.title}</p>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Quest In Progress
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {selectedQuest.title}
+                    </p>
                     <div className="mt-6 px-8">
                       <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                        <span>{selectedQuest.progress}/{selectedQuest.total}</span>
-                        <span>{Math.round((selectedQuest.progress / selectedQuest.total) * 100)}%</span>
+                        <span>
+                          {selectedQuest.progress}/{selectedQuest.total}
+                        </span>
+                        <span>
+                          {Math.round(
+                            (selectedQuest.progress / selectedQuest.total) *
+                              100,
+                          )}
+                          %
+                        </span>
                       </div>
                       <div className="h-4 rounded-full bg-secondary overflow-hidden">
                         <motion.div
                           className="h-full rounded-full bg-gradient-to-r from-primary to-success"
-                          animate={{ width: `${(selectedQuest.progress / selectedQuest.total) * 100}%` }}
+                          animate={{
+                            width: `${(selectedQuest.progress / selectedQuest.total) * 100}%`,
+                          }}
                           transition={{ duration: 0.3 }}
                         />
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-4">Simulating activity...</p>
+                    <p className="text-xs text-muted-foreground mt-4">
+                      Simulating activity...
+                    </p>
                   </div>
                 )}
 
@@ -507,15 +641,26 @@ const QuestsSection = () => {
                     >
                       <CheckCircle className="w-10 h-10 text-success" />
                     </motion.div>
-                    <h3 className="text-lg font-semibold text-foreground">Quest Completed! 🎉</h3>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Quest Completed! 🎉
+                    </h3>
                     <p className="text-sm text-muted-foreground mt-2">
-                      You've completed <span className="font-semibold text-foreground">{selectedQuest.title}</span>
+                      You've completed{" "}
+                      <span className="font-semibold text-foreground">
+                        {selectedQuest.title}
+                      </span>
                     </p>
 
                     <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-success/10 border border-success/20">
-                      <p className="text-sm text-muted-foreground">Your reward</p>
-                      <p className="text-2xl font-bold text-primary mt-1">+{selectedQuest.reward} {selectedQuest.rewardType}</p>
-                      <p className="text-xs text-muted-foreground mt-1">+{selectedQuest.xp} XP</p>
+                      <p className="text-sm text-muted-foreground">
+                        Your reward
+                      </p>
+                      <p className="text-2xl font-bold text-primary mt-1">
+                        +{selectedQuest.reward} {selectedQuest.rewardType}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        +{selectedQuest.xp} XP
+                      </p>
                     </div>
 
                     <motion.button
@@ -535,11 +680,20 @@ const QuestsSection = () => {
                   <div className="py-12 text-center">
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                       className="w-16 h-16 border-4 border-success border-t-transparent rounded-full mx-auto mb-6"
                     />
-                    <h3 className="text-lg font-semibold text-foreground">Claiming Reward...</h3>
-                    <p className="text-sm text-muted-foreground mt-2">Processing your {selectedQuest.reward} {selectedQuest.rewardType}</p>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Claiming Reward...
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Processing your {selectedQuest.reward}{" "}
+                      {selectedQuest.rewardType}
+                    </p>
                   </div>
                 )}
 
@@ -554,11 +708,18 @@ const QuestsSection = () => {
                     >
                       <PartyPopper className="w-10 h-10 text-success" />
                     </motion.div>
-                    <h3 className="text-xl font-bold text-foreground">Reward Claimed! 🎉</h3>
+                    <h3 className="text-xl font-bold text-foreground">
+                      Reward Claimed! 🎉
+                    </h3>
                     <p className="text-muted-foreground mt-2">
-                      You earned <span className="font-bold text-primary">+{selectedQuest.reward} {selectedQuest.rewardType}</span>
+                      You earned{" "}
+                      <span className="font-bold text-primary">
+                        +{selectedQuest.reward} {selectedQuest.rewardType}
+                      </span>
                     </p>
-                    <p className="text-sm text-success mt-1">+{selectedQuest.xp} XP added to your level</p>
+                    <p className="text-sm text-success mt-1">
+                      +{selectedQuest.xp} XP added to your level
+                    </p>
 
                     <motion.button
                       whileHover={{ scale: 1.02 }}

@@ -85,35 +85,25 @@ const PresalePage = () => {
       <Footer />
 
       {/* Floating Presale Widget */}
-      <AnimatePresence>
-        {showPresaleWidget && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowPresaleWidget(false)}
-              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 100, x: "-50%" }}
-              animate={{ opacity: 1, y: 0, x: "-50%" }}
-              exit={{ opacity: 0, y: 100, x: "-50%" }}
-              className="fixed bottom-4 left-1/2 z-50"
-            >
-              <div className="relative">
-                <button
-                  onClick={() => setShowPresaleWidget(false)}
-                  className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors z-10"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <PresaleWidget onBuyClick={handleWidgetBuy} />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {showPresaleWidget && (
+        <>
+          <div
+            onClick={() => setShowPresaleWidget(false)}
+            className="fixed inset-0 bg-foreground/20 z-40"
+          />
+          <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50">
+            <div className="relative">
+              <button
+                onClick={() => setShowPresaleWidget(false)}
+                className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors z-10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <PresaleWidget onBuyClick={handleWidgetBuy} />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Modals */}
       <WalletModal

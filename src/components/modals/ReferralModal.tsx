@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, CheckCircle, Users, Coins, Gamepad2, Share2 } from "lucide-react";
+import {
+  X,
+  Copy,
+  CheckCircle,
+  Users,
+  Coins,
+  Gamepad2,
+  Share2,
+} from "lucide-react";
 
 interface ReferralModalProps {
   isOpen: boolean;
@@ -53,7 +61,7 @@ const ReferralModal = ({ isOpen, onClose }: ReferralModalProps) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-foreground/20 z-50"
           />
 
           <motion.div
@@ -71,18 +79,27 @@ const ReferralModal = ({ isOpen, onClose }: ReferralModalProps) => {
                     <Share2 className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-foreground">Invite Friends</h2>
-                    <p className="text-sm text-muted-foreground">Earn rewards together</p>
+                    <h2 className="text-xl font-semibold text-foreground">
+                      Invite Friends
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Earn rewards together
+                    </p>
                   </div>
                 </div>
-                <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                >
                   <X className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
 
               {/* Referral Link */}
               <div className="bg-secondary/50 rounded-xl p-4 mb-6">
-                <label className="text-sm font-medium text-foreground">Your Referral Link</label>
+                <label className="text-sm font-medium text-foreground">
+                  Your Referral Link
+                </label>
                 <div className="flex items-center gap-2 mt-2">
                   <input
                     type="text"
@@ -95,17 +112,25 @@ const ReferralModal = ({ isOpen, onClose }: ReferralModalProps) => {
                     whileTap={{ scale: 0.95 }}
                     onClick={handleCopy}
                     className={`p-2 rounded-lg transition-colors ${
-                      copied ? "bg-success text-success-foreground" : "bg-primary text-primary-foreground"
+                      copied
+                        ? "bg-success text-success-foreground"
+                        : "bg-primary text-primary-foreground"
                     }`}
                   >
-                    {copied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                    {copied ? (
+                      <CheckCircle className="w-5 h-5" />
+                    ) : (
+                      <Copy className="w-5 h-5" />
+                    )}
                   </motion.button>
                 </div>
               </div>
 
               {/* Rewards */}
               <div className="space-y-3 mb-6">
-                <h3 className="text-sm font-medium text-foreground">Referral Rewards</h3>
+                <h3 className="text-sm font-medium text-foreground">
+                  Referral Rewards
+                </h3>
                 {referralRewards.map((reward, index) => (
                   <motion.div
                     key={index}
@@ -115,15 +140,23 @@ const ReferralModal = ({ isOpen, onClose }: ReferralModalProps) => {
                     className="flex items-center justify-between p-3 rounded-xl bg-card border border-border"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl ${reward.bgColor} flex items-center justify-center`}>
+                      <div
+                        className={`w-10 h-10 rounded-xl ${reward.bgColor} flex items-center justify-center`}
+                      >
                         <reward.icon className={`w-5 h-5 ${reward.color}`} />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-foreground">{reward.title}</p>
-                        <p className="text-xs text-muted-foreground">{reward.description}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {reward.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {reward.description}
+                        </p>
                       </div>
                     </div>
-                    <span className={`text-sm font-semibold ${reward.color}`}>{reward.reward}</span>
+                    <span className={`text-sm font-semibold ${reward.color}`}>
+                      {reward.reward}
+                    </span>
                   </motion.div>
                 ))}
               </div>

@@ -50,7 +50,7 @@ const WalletModal = ({ isOpen, onClose, onSelectWallet }: WalletModalProps) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-foreground/20 z-50"
           />
 
           {/* Modal */}
@@ -69,8 +69,12 @@ const WalletModal = ({ isOpen, onClose, onSelectWallet }: WalletModalProps) => {
                     <Wallet className="w-5 h-5 text-primary-foreground" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-foreground">Connect Wallet</h2>
-                    <p className="text-sm text-muted-foreground">Choose how to connect</p>
+                    <h2 className="text-xl font-semibold text-foreground">
+                      Connect Wallet
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Choose how to connect
+                    </p>
                   </div>
                 </div>
                 <button
@@ -100,15 +104,23 @@ const WalletModal = ({ isOpen, onClose, onSelectWallet }: WalletModalProps) => {
                         <span className="text-2xl">{option.icon}</span>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">{option.name}</span>
+                            <span className="font-medium text-foreground">
+                              {option.name}
+                            </span>
                             {option.recommended && (
-                              <span className="mlc-badge-primary text-[10px]">Recommended</span>
+                              <span className="mlc-badge-primary text-[10px]">
+                                Recommended
+                              </span>
                             )}
                             {option.popular && !option.recommended && (
-                              <span className="mlc-badge text-[10px]">Popular</span>
+                              <span className="mlc-badge text-[10px]">
+                                Popular
+                              </span>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">{option.description}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {option.description}
+                          </p>
                         </div>
                       </div>
                       <ExternalLink className="w-4 h-4 text-muted-foreground" />
@@ -121,9 +133,12 @@ const WalletModal = ({ isOpen, onClose, onSelectWallet }: WalletModalProps) => {
               <div className="mt-6 p-4 rounded-xl bg-secondary/50 flex items-start gap-3">
                 <Shield className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-foreground">Secure Connection</p>
+                  <p className="text-sm font-medium text-foreground">
+                    Secure Connection
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    Your wallet connection is encrypted and secure. We never have access to your private keys.
+                    Your wallet connection is encrypted and secure. We never
+                    have access to your private keys.
                   </p>
                 </div>
               </div>

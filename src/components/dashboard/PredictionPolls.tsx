@@ -1,8 +1,17 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Trophy, Users, Clock, Coins, TrendingUp, X,
-  CheckCircle, Flame, Target, ShoppingCart, Shield
+  Trophy,
+  Users,
+  Clock,
+  Coins,
+  TrendingUp,
+  X,
+  CheckCircle,
+  Flame,
+  Target,
+  ShoppingCart,
+  Shield,
 } from "lucide-react";
 
 interface PollOption {
@@ -28,28 +37,49 @@ interface Poll {
 }
 
 const TEAM_LOGOS: Record<string, string> = {
-  "Boston Celtics": "https://cdn.nba.com/logos/nba/1610612738/primary/L/logo.svg",
-  "Denver Nuggets": "https://cdn.nba.com/logos/nba/1610612743/primary/L/logo.svg",
-  "Real Madrid": "https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg",
-  "Manchester City": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
-  "Patrick Mahomes": "https://upload.wikimedia.org/wikipedia/en/e/e1/Kansas_City_Chiefs_logo.svg",
-  "Jalen Hurts": "https://upload.wikimedia.org/wikipedia/en/8/8e/Philadelphia_Eagles_logo.svg",
-  "Erling Haaland": "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
-  "Mohamed Salah": "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg",
+  "Boston Celtics":
+    "https://cdn.nba.com/logos/nba/1610612738/primary/L/logo.svg",
+  "Denver Nuggets":
+    "https://cdn.nba.com/logos/nba/1610612743/primary/L/logo.svg",
+  "Real Madrid":
+    "https://upload.wikimedia.org/wikipedia/en/5/56/Real_Madrid_CF.svg",
+  "Manchester City":
+    "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
+  "Patrick Mahomes":
+    "https://upload.wikimedia.org/wikipedia/en/e/e1/Kansas_City_Chiefs_logo.svg",
+  "Jalen Hurts":
+    "https://upload.wikimedia.org/wikipedia/en/8/8e/Philadelphia_Eagles_logo.svg",
+  "Erling Haaland":
+    "https://upload.wikimedia.org/wikipedia/en/e/eb/Manchester_City_FC_badge.svg",
+  "Mohamed Salah":
+    "https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg",
 };
 
 const polls: Poll[] = [
   {
     id: "nba-finals",
     title: "NBA Finals 2026 Champion",
-    description: "Who wins it all this year? Pick your side and back it with MLC.",
+    description:
+      "Who wins it all this year? Pick your side and back it with MLC.",
     category: "Basketball",
     endsIn: "3d 14h",
     totalPool: 45000,
     totalParticipants: 312,
     options: [
-      { label: "Boston Celtics", mlcRequired: 50, participants: 180, totalPool: 27000, logo: TEAM_LOGOS["Boston Celtics"] },
-      { label: "Denver Nuggets", mlcRequired: 50, participants: 132, totalPool: 18000, logo: TEAM_LOGOS["Denver Nuggets"] },
+      {
+        label: "Boston Celtics",
+        mlcRequired: 50,
+        participants: 180,
+        totalPool: 27000,
+        logo: TEAM_LOGOS["Boston Celtics"],
+      },
+      {
+        label: "Denver Nuggets",
+        mlcRequired: 50,
+        participants: 132,
+        totalPool: 18000,
+        logo: TEAM_LOGOS["Denver Nuggets"],
+      },
     ],
     status: "active",
     hot: true,
@@ -57,14 +87,27 @@ const polls: Poll[] = [
   {
     id: "ucl-winner",
     title: "Champions League Winner",
-    description: "The biggest prize in European football. Who lifts the trophy?",
+    description:
+      "The biggest prize in European football. Who lifts the trophy?",
     category: "Football",
     endsIn: "12d 8h",
     totalPool: 38500,
     totalParticipants: 245,
     options: [
-      { label: "Real Madrid", mlcRequired: 100, participants: 140, totalPool: 22000, logo: TEAM_LOGOS["Real Madrid"] },
-      { label: "Manchester City", mlcRequired: 100, participants: 105, totalPool: 16500, logo: TEAM_LOGOS["Manchester City"] },
+      {
+        label: "Real Madrid",
+        mlcRequired: 100,
+        participants: 140,
+        totalPool: 22000,
+        logo: TEAM_LOGOS["Real Madrid"],
+      },
+      {
+        label: "Manchester City",
+        mlcRequired: 100,
+        participants: 105,
+        totalPool: 16500,
+        logo: TEAM_LOGOS["Manchester City"],
+      },
     ],
     status: "active",
   },
@@ -77,8 +120,20 @@ const polls: Poll[] = [
     totalPool: 22000,
     totalParticipants: 156,
     options: [
-      { label: "Patrick Mahomes", mlcRequired: 75, participants: 98, totalPool: 14200, logo: TEAM_LOGOS["Patrick Mahomes"] },
-      { label: "Jalen Hurts", mlcRequired: 75, participants: 58, totalPool: 7800, logo: TEAM_LOGOS["Jalen Hurts"] },
+      {
+        label: "Patrick Mahomes",
+        mlcRequired: 75,
+        participants: 98,
+        totalPool: 14200,
+        logo: TEAM_LOGOS["Patrick Mahomes"],
+      },
+      {
+        label: "Jalen Hurts",
+        mlcRequired: 75,
+        participants: 58,
+        totalPool: 7800,
+        logo: TEAM_LOGOS["Jalen Hurts"],
+      },
     ],
     status: "active",
   },
@@ -91,8 +146,20 @@ const polls: Poll[] = [
     totalPool: 31000,
     totalParticipants: 198,
     options: [
-      { label: "Erling Haaland", mlcRequired: 50, participants: 142, totalPool: 22500, logo: TEAM_LOGOS["Erling Haaland"] },
-      { label: "Mohamed Salah", mlcRequired: 50, participants: 56, totalPool: 8500, logo: TEAM_LOGOS["Mohamed Salah"] },
+      {
+        label: "Erling Haaland",
+        mlcRequired: 50,
+        participants: 142,
+        totalPool: 22500,
+        logo: TEAM_LOGOS["Erling Haaland"],
+      },
+      {
+        label: "Mohamed Salah",
+        mlcRequired: 50,
+        participants: 56,
+        totalPool: 8500,
+        logo: TEAM_LOGOS["Mohamed Salah"],
+      },
     ],
     status: "ended",
     userVote: 0,
@@ -102,15 +169,19 @@ const polls: Poll[] = [
 const PredictionPolls = () => {
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [voteStep, setVoteStep] = useState<"select" | "confirm" | "processing" | "done">("select");
+  const [voteStep, setVoteStep] = useState<
+    "select" | "confirm" | "processing" | "done"
+  >("select");
   const [useBalance, setUseBalance] = useState(true);
   const [useNft, setUseNft] = useState(false);
-  const [filter, setFilter] = useState<"active" | "ended" | "my_votes">("active");
+  const [filter, setFilter] = useState<"active" | "ended" | "my_votes">(
+    "active",
+  );
 
   const userBalance = 4000;
   const hasNft = true; // mock: user holds membership NFT
 
-  const filtered = polls.filter(p => {
+  const filtered = polls.filter((p) => {
     if (filter === "active") return p.status === "active";
     if (filter === "ended") return p.status === "ended";
     if (filter === "my_votes") return p.userVote !== undefined;
@@ -120,13 +191,17 @@ const PredictionPolls = () => {
   const getExpectedReturn = (poll: Poll, optionIndex: number) => {
     const option = poll.options[optionIndex];
     const otherOption = poll.options[1 - optionIndex];
-    const yourShare = option.mlcRequired / (option.totalPool + option.mlcRequired);
+    const yourShare =
+      option.mlcRequired / (option.totalPool + option.mlcRequired);
     const potentialWin = otherOption.totalPool * yourShare;
     return option.mlcRequired + potentialWin;
   };
 
   const getMultiplier = (poll: Poll, optionIndex: number) => {
-    return (getExpectedReturn(poll, optionIndex) / poll.options[optionIndex].mlcRequired).toFixed(1);
+    return (
+      getExpectedReturn(poll, optionIndex) /
+      poll.options[optionIndex].mlcRequired
+    ).toFixed(1);
   };
 
   const handleVote = () => {
@@ -152,7 +227,9 @@ const PredictionPolls = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-foreground">Predictions</h2>
-              <p className="text-sm text-muted-foreground">Vote on sports outcomes with MLC. Winners split the losing pool.</p>
+              <p className="text-sm text-muted-foreground">
+                Vote on sports outcomes with MLC. Winners split the losing pool.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -167,7 +244,9 @@ const PredictionPolls = () => {
             )}
             <div className="p-3 rounded-xl bg-secondary/80 border border-border">
               <p className="text-xs text-muted-foreground">Your Balance</p>
-              <p className="text-lg font-bold text-foreground">{userBalance.toLocaleString()} MLC</p>
+              <p className="text-lg font-bold text-foreground">
+                {userBalance.toLocaleString()} MLC
+              </p>
             </div>
           </div>
         </div>
@@ -178,17 +257,23 @@ const PredictionPolls = () => {
         <div className="p-3 rounded-xl bg-secondary/50 text-center">
           <Target className="w-5 h-5 text-primary mx-auto mb-1" />
           <p className="text-xs font-medium text-foreground">Pick a Side</p>
-          <p className="text-xs text-muted-foreground">Choose your prediction</p>
+          <p className="text-xs text-muted-foreground">
+            Choose your prediction
+          </p>
         </div>
         <div className="p-3 rounded-xl bg-secondary/50 text-center">
           <Coins className="w-5 h-5 text-warning mx-auto mb-1" />
           <p className="text-xs font-medium text-foreground">Stake MLC</p>
-          <p className="text-xs text-muted-foreground">Use balance or buy more</p>
+          <p className="text-xs text-muted-foreground">
+            Use balance or buy more
+          </p>
         </div>
         <div className="p-3 rounded-xl bg-secondary/50 text-center">
           <TrendingUp className="w-5 h-5 text-success mx-auto mb-1" />
           <p className="text-xs font-medium text-foreground">Win Rewards</p>
-          <p className="text-xs text-muted-foreground">Losers' pool goes to winners</p>
+          <p className="text-xs text-muted-foreground">
+            Losers' pool goes to winners
+          </p>
         </div>
       </div>
 
@@ -226,25 +311,32 @@ const PredictionPolls = () => {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium text-muted-foreground">{poll.category}</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {poll.category}
+                  </span>
                   {poll.hot && (
                     <span className="px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-xs font-medium flex items-center gap-1">
                       <Flame className="w-3 h-3" /> Hot
                     </span>
                   )}
                   {poll.status === "ended" && (
-                    <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">Ended</span>
+                    <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+                      Ended
+                    </span>
                   )}
                 </div>
                 <h3 className="font-semibold text-foreground">{poll.title}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{poll.description}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {poll.description}
+                </p>
               </div>
             </div>
 
             {/* Options Side by Side */}
             <div className="grid grid-cols-2 gap-3 mb-4">
               {poll.options.map((option, optIdx) => {
-                const poolPercentage = (option.totalPool / poll.totalPool) * 100;
+                const poolPercentage =
+                  (option.totalPool / poll.totalPool) * 100;
                 const isUserVote = poll.userVote === optIdx;
                 return (
                   <div
@@ -270,11 +362,14 @@ const PredictionPolls = () => {
                           alt={option.label}
                           className="w-7 h-7 object-contain"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
                           }}
                         />
                       </div>
-                      <p className="font-semibold text-foreground text-sm">{option.label}</p>
+                      <p className="font-semibold text-foreground text-sm">
+                        {option.label}
+                      </p>
                     </div>
 
                     <div className="h-2 rounded-full bg-secondary overflow-hidden mb-2">
@@ -284,18 +379,27 @@ const PredictionPolls = () => {
                       />
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">{option.participants} votes</span>
-                      <span className="font-medium text-foreground">{poolPercentage.toFixed(0)}%</span>
+                      <span className="text-muted-foreground">
+                        {option.participants} votes
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {poolPercentage.toFixed(0)}%
+                      </span>
                     </div>
                     <div className="mt-2 pt-2 border-t border-border/50">
                       <div className="flex justify-between text-xs">
                         <span className="text-muted-foreground">Entry</span>
-                        <span className="font-semibold text-foreground">{option.mlcRequired} MLC</span>
+                        <span className="font-semibold text-foreground">
+                          {option.mlcRequired} MLC
+                        </span>
                       </div>
                       <div className="flex justify-between text-xs mt-1">
-                        <span className="text-muted-foreground">Est. return</span>
+                        <span className="text-muted-foreground">
+                          Est. return
+                        </span>
                         <span className="font-semibold text-success">
-                          {getExpectedReturn(poll, optIdx).toFixed(0)} MLC ({getMultiplier(poll, optIdx)}x)
+                          {getExpectedReturn(poll, optIdx).toFixed(0)} MLC (
+                          {getMultiplier(poll, optIdx)}x)
                         </span>
                       </div>
                     </div>
@@ -315,10 +419,12 @@ const PredictionPolls = () => {
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1">
-                  <Coins className="w-3.5 h-3.5" /> {poll.totalPool.toLocaleString()} MLC pool
+                  <Coins className="w-3.5 h-3.5" />{" "}
+                  {poll.totalPool.toLocaleString()} MLC pool
                 </span>
                 <span className="flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" /> {poll.totalParticipants} voters
+                  <Users className="w-3.5 h-3.5" /> {poll.totalParticipants}{" "}
+                  voters
                 </span>
               </div>
               <span className="flex items-center gap-1">
@@ -344,8 +450,10 @@ const PredictionPolls = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => { if (voteStep !== "processing") resetModal(); }}
-              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
+              onClick={() => {
+                if (voteStep !== "processing") resetModal();
+              }}
+              className="fixed inset-0 bg-foreground/20 z-50"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -357,8 +465,13 @@ const PredictionPolls = () => {
                 {voteStep === "confirm" && (
                   <>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-foreground">Confirm Your Vote</h3>
-                      <button onClick={resetModal} className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Confirm Your Vote
+                      </h3>
+                      <button
+                        onClick={resetModal}
+                        className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                      >
                         <X className="w-5 h-5 text-muted-foreground" />
                       </button>
                     </div>
@@ -372,7 +485,9 @@ const PredictionPolls = () => {
                         />
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">{selectedPoll.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedPoll.title}
+                        </p>
                         <p className="text-xl font-bold text-foreground">
                           {selectedPoll.options[selectedOption].label}
                         </p>
@@ -381,43 +496,71 @@ const PredictionPolls = () => {
 
                     <div className="p-4 rounded-xl bg-secondary/50 space-y-3 mb-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Entry cost</span>
+                        <span className="text-sm text-muted-foreground">
+                          Entry cost
+                        </span>
                         <span className="font-bold text-foreground">
-                          {useNft ? "Free (NFT)" : `${selectedPoll.options[selectedOption].mlcRequired} MLC`}
+                          {useNft
+                            ? "Free (NFT)"
+                            : `${selectedPoll.options[selectedOption].mlcRequired} MLC`}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Est. return if you win</span>
+                        <span className="text-sm text-muted-foreground">
+                          Est. return if you win
+                        </span>
                         <span className="font-bold text-success">
-                          {getExpectedReturn(selectedPoll, selectedOption).toFixed(0)} MLC ({getMultiplier(selectedPoll, selectedOption)}x)
+                          {getExpectedReturn(
+                            selectedPoll,
+                            selectedOption,
+                          ).toFixed(0)}{" "}
+                          MLC ({getMultiplier(selectedPoll, selectedOption)}x)
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">If you lose</span>
+                        <span className="text-sm text-muted-foreground">
+                          If you lose
+                        </span>
                         <span className="font-medium text-destructive">
-                          {useNft ? "No loss (NFT protected)" : `-${selectedPoll.options[selectedOption].mlcRequired} MLC`}
+                          {useNft
+                            ? "No loss (NFT protected)"
+                            : `-${selectedPoll.options[selectedOption].mlcRequired} MLC`}
                         </span>
                       </div>
                     </div>
 
                     {/* Payment source */}
                     <div className="space-y-2 mb-4">
-                      <p className="text-sm font-medium text-foreground">Pay with:</p>
+                      <p className="text-sm font-medium text-foreground">
+                        Pay with:
+                      </p>
                       <div className="grid grid-cols-3 gap-2">
                         <button
-                          onClick={() => { setUseBalance(true); setUseNft(false); }}
+                          onClick={() => {
+                            setUseBalance(true);
+                            setUseNft(false);
+                          }}
                           className={`p-3 rounded-xl border text-sm font-medium transition-colors ${
-                            useBalance && !useNft ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"
+                            useBalance && !useNft
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-border text-muted-foreground"
                           }`}
                         >
                           <Coins className="w-4 h-4 mx-auto mb-1" />
                           MLC Balance
-                          <p className="text-xs mt-0.5">{userBalance.toLocaleString()}</p>
+                          <p className="text-xs mt-0.5">
+                            {userBalance.toLocaleString()}
+                          </p>
                         </button>
                         <button
-                          onClick={() => { setUseBalance(false); setUseNft(false); }}
+                          onClick={() => {
+                            setUseBalance(false);
+                            setUseNft(false);
+                          }}
                           className={`p-3 rounded-xl border text-sm font-medium transition-colors ${
-                            !useBalance && !useNft ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground"
+                            !useBalance && !useNft
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-border text-muted-foreground"
                           }`}
                         >
                           <ShoppingCart className="w-4 h-4 mx-auto mb-1" />
@@ -425,7 +568,10 @@ const PredictionPolls = () => {
                           <p className="text-xs mt-0.5">Purchase</p>
                         </button>
                         <button
-                          onClick={() => { setUseNft(true); setUseBalance(false); }}
+                          onClick={() => {
+                            setUseNft(true);
+                            setUseBalance(false);
+                          }}
                           disabled={!hasNft}
                           className={`p-3 rounded-xl border text-sm font-medium transition-colors ${
                             useNft
@@ -437,7 +583,9 @@ const PredictionPolls = () => {
                         >
                           <Shield className="w-4 h-4 mx-auto mb-1" />
                           NFT Pass
-                          <p className="text-xs mt-0.5">{hasNft ? "Free vote" : "Not held"}</p>
+                          <p className="text-xs mt-0.5">
+                            {hasNft ? "Free vote" : "Not held"}
+                          </p>
                         </button>
                       </div>
                     </div>
@@ -468,12 +616,20 @@ const PredictionPolls = () => {
                   <div className="py-12 text-center">
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                       className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full mx-auto mb-6"
                     />
-                    <h3 className="text-xl font-semibold text-foreground">Processing Vote</h3>
+                    <h3 className="text-xl font-semibold text-foreground">
+                      Processing Vote
+                    </h3>
                     <p className="text-muted-foreground mt-2">
-                      {useNft ? "Verifying your Membership NFT..." : "Locking your MLC into the pool..."}
+                      {useNft
+                        ? "Verifying your Membership NFT..."
+                        : "Locking your MLC into the pool..."}
                     </p>
                   </div>
                 )}
@@ -488,17 +644,28 @@ const PredictionPolls = () => {
                     >
                       <CheckCircle className="w-10 h-10 text-success" />
                     </motion.div>
-                    <h3 className="text-xl font-semibold text-foreground">Vote Placed!</h3>
+                    <h3 className="text-xl font-semibold text-foreground">
+                      Vote Placed!
+                    </h3>
                     <p className="text-muted-foreground mt-2">
-                      You voted for <span className="font-bold text-primary">{selectedPoll!.options[selectedOption!].label}</span>
+                      You voted for{" "}
+                      <span className="font-bold text-primary">
+                        {selectedPoll!.options[selectedOption!].label}
+                      </span>
                     </p>
                     {useNft && (
                       <p className="text-xs text-primary mt-1 flex items-center justify-center gap-1">
-                        <Shield className="w-3 h-3" /> Applied with Membership NFT
+                        <Shield className="w-3 h-3" /> Applied with Membership
+                        NFT
                       </p>
                     )}
                     <p className="text-sm text-success mt-1">
-                      Potential return: {getExpectedReturn(selectedPoll!, selectedOption!).toFixed(0)} MLC
+                      Potential return:{" "}
+                      {getExpectedReturn(
+                        selectedPoll!,
+                        selectedOption!,
+                      ).toFixed(0)}{" "}
+                      MLC
                     </p>
                     <motion.button
                       whileHover={{ scale: 1.02 }}

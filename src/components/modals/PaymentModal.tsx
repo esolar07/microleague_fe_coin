@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+
 import {
   X,
   Coins,
@@ -566,23 +566,14 @@ const PaymentModal = ({
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             onClick={handleClose}
-            className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-foreground/20 z-50"
           />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-4"
-          >
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
             <div className="mlc-card-elevated w-full max-w-md max-h-[90vh] overflow-y-auto">
               {/* Payment Selection */}
               {step === "select" && (
@@ -624,9 +615,7 @@ const PaymentModal = ({
                   </div>
 
                   <div className="space-y-3">
-                    {/* <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                    {/* <button
                       onClick={() => handlePaymentSelect("card")}
                       className="w-full p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all text-left"
                     >
@@ -643,11 +632,9 @@ const PaymentModal = ({
                           </p>
                         </div>
                       </div>
-                    </motion.button> */}
+                    </button> */}
 
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                    <button
                       onClick={() => handlePaymentSelect("crypto")}
                       className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left"
                     >
@@ -669,11 +656,9 @@ const PaymentModal = ({
                           </p>
                         </div>
                       </div>
-                    </motion.button>
+                    </button>
 
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                    <button
                       onClick={() => handlePaymentSelect("bank")}
                       className="w-full p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all text-left"
                     >
@@ -690,7 +675,7 @@ const PaymentModal = ({
                           </p>
                         </div>
                       </div>
-                    </motion.button>
+                    </button>
                   </div>
                 </>
               )}
@@ -783,14 +768,12 @@ const PaymentModal = ({
                   )}
 
                   {!isConnected ? (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                    <button
                       onClick={() => openConnectModal?.()}
                       className="w-full mlc-btn-primary"
                     >
                       Connect wallet
-                    </motion.button>
+                    </button>
                   ) : !isOnCorrectChain ? (
                     <div className="space-y-3">
                       <div className="p-4 rounded-xl bg-warning/10 border border-warning/20 flex items-start gap-3">
@@ -812,9 +795,7 @@ const PaymentModal = ({
                           </p>
                         </div>
                       </div>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                      <button
                         disabled={isSwitchingChain}
                         onClick={async () => {
                           try {
@@ -829,10 +810,8 @@ const PaymentModal = ({
                         {isSwitchingChain
                           ? "Switching..."
                           : `Switch to ${APP_CHAIN.name}`}
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                      </button>
+                      <button
                         onClick={() => {
                           // Force refresh chain detection
                           setActualChainId(null);
@@ -841,7 +820,7 @@ const PaymentModal = ({
                         className="w-full mlc-btn-secondary text-xs"
                       >
                         Refresh if chain detection is stuck
-                      </motion.button>
+                      </button>
                     </div>
                   ) : (
                     <>
@@ -880,9 +859,7 @@ const PaymentModal = ({
                       )}
 
                       <div className="space-y-3">
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                        <button
                           disabled={
                             !PRESALE_ADDRESS ||
                             !USDC_ADDRESS ||
@@ -901,11 +878,9 @@ const PaymentModal = ({
                               : needsApproval
                                 ? "Approve & Buy"
                                 : `Buy with ${numericAmount.toFixed(2)} USDC`}
-                        </motion.button>
+                        </button>
 
-                        {/* <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                        {/* <button
                           onClick={() => {
                             refetchAllowance();
                             console.log("🔄 Refreshed allowance data");
@@ -913,20 +888,18 @@ const PaymentModal = ({
                           className="w-full mlc-btn-secondary text-xs"
                         >
                           Refresh Approval Status
-                        </motion.button> */}
+                        </button> */}
                       </div>
                     </>
                   )}
 
                   {insufficientFunds && (
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                    <button
                       onClick={handleCryptoConfirm}
                       className="w-full mlc-btn-secondary mt-4"
                     >
                       Top Up Balance
-                    </motion.button>
+                    </button>
                   )}
                 </>
               )}
@@ -964,9 +937,7 @@ const PaymentModal = ({
                   </div>
 
                   <div className="space-y-3">
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
+                    <button
                       onClick={handleCoinbaseOnramp}
                       disabled={!COINBASE_PROJECT_ID || !address}
                       className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
@@ -982,7 +953,7 @@ const PaymentModal = ({
                           </p>
                         </div>
                       </div>
-                    </motion.button>
+                    </button>
                   </div>
 
                   {/* Onramp error banner */}
@@ -1011,14 +982,12 @@ const PaymentModal = ({
                   )}
 
                   {/* Refresh Balance */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button
                     onClick={handleRefreshBalance}
                     className="w-full mlc-btn-secondary mt-4"
                   >
                     Refresh Balance
-                  </motion.button>
+                  </button>
                 </>
               )}
 
@@ -1101,15 +1070,13 @@ const PaymentModal = ({
                     ))}
                   </div>
 
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button
                     onClick={() => setStep("bank_upload")}
                     className="w-full mlc-btn-primary flex items-center justify-center gap-2"
                   >
                     I've Made the Transfer
                     <ArrowLeft className="w-4 h-4 rotate-180" />
-                  </motion.button>
+                  </button>
                 </>
               )}
 
@@ -1237,9 +1204,7 @@ const PaymentModal = ({
                     </div>
                   )}
 
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <button
                     onClick={handleBankUpload}
                     disabled={bankSubmitting || !bankProofFile}
                     className="w-full mlc-btn-primary flex items-center justify-center gap-2 disabled:opacity-60"
@@ -1252,7 +1217,7 @@ const PaymentModal = ({
                     ) : (
                       "Submit Transfer"
                     )}
-                  </motion.button>
+                  </button>
                 </>
               )}
 
@@ -1272,14 +1237,9 @@ const PaymentModal = ({
               {/* Success */}
               {step === "success" && (
                 <div className="py-6 text-center">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", duration: 0.5 }}
-                    className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4"
-                  >
+                  <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="w-8 h-8 text-success" />
-                  </motion.div>
+                  </div>
                   <h2 className="text-xl font-semibold text-foreground">
                     {bankTransferId
                       ? "Transfer Submitted!"
@@ -1385,24 +1345,20 @@ const PaymentModal = ({
 
                   <div className="space-y-3">
                     {!bankTransferId && (
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                      <button
                         onClick={handleViewSAFT}
                         className="w-full mlc-btn-primary flex items-center justify-center gap-2"
                       >
                         <FileText className="w-4 h-4" />
                         View SAFT Certificate
-                      </motion.button>
+                      </button>
                     )}
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                    <button
                       onClick={handleSuccessClose}
                       className="w-full mlc-btn-secondary"
                     >
                       Go to Dashboard
-                    </motion.button>
+                    </button>
                   </div>
                 </div>
               )}
@@ -1504,31 +1460,27 @@ const PaymentModal = ({
                   </div>
 
                   <div className="space-y-3">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                    <button
                       onClick={handleDownloadSAFT}
                       className="w-full mlc-btn-primary flex items-center justify-center gap-2"
                     >
                       <Download className="w-4 h-4" />
                       Download PDF
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                    </button>
+                    <button
                       onClick={handleSuccessClose}
                       className="w-full mlc-btn-secondary flex items-center justify-center gap-2"
                     >
                       Close
-                    </motion.button>
+                    </button>
                   </div>
                 </>
               )}
             </div>
-          </motion.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 };
 

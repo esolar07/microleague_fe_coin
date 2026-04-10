@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
 import { ArrowRight, Info, Zap, AlertTriangle } from "lucide-react";
 import { useReadContract } from "wagmi";
 import { formatUnits } from "viem";
@@ -131,12 +130,7 @@ const PresaleWidget = ({
   const quickAmounts = [100, 500, 1000, 5000];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="mlc-card-elevated max-w-md w-full"
-    >
+    <div className="mlc-card-elevated max-w-md w-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -173,10 +167,8 @@ const PresaleWidget = ({
           </span>
         </div>
         <div className="h-2 bg-secondary rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.max(progressPercent, 0.5)}%` }}
-            transition={{ duration: 1, delay: 0.5 }}
+          <div
+            style={{ width: `${Math.max(progressPercent, 0.5)}%` }}
             className="h-full mlc-gradient-bg rounded-full"
           />
         </div>
@@ -209,11 +201,7 @@ const PresaleWidget = ({
 
         {/* Minimum amount validation message */}
         {isBelowMinimum && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg"
-          >
+          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
             <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
               <p className="text-red-700 font-medium">
@@ -224,7 +212,7 @@ const PresaleWidget = ({
                 (${minUsdAmount.toFixed(2)} USD minimum)
               </p>
             </div>
-          </motion.div>
+          </div>
         )}
 
         {/* Helpful info about minimum */}
@@ -299,9 +287,7 @@ const PresaleWidget = ({
       </div>
 
       {/* Buy Button */}
-      <motion.button
-        whileHover={{ scale: isValidAmount ? 1.02 : 1 }}
-        whileTap={{ scale: isValidAmount ? 0.98 : 1 }}
+      <button
         onClick={() => isValidAmount && onBuyClick(parseFloat(usdAmount) || 0)}
         disabled={!isValidAmount}
         className={`w-full flex items-center justify-center gap-2 text-lg py-4 transition-all duration-200 ${
@@ -312,7 +298,7 @@ const PresaleWidget = ({
       >
         {isBelowMinimum ? "Amount Too Low" : "Buy MLC"}
         <ArrowRight className="w-5 h-5" />
-      </motion.button>
+      </button>
 
       {/* Phase End Notice */}
       <p className="text-center text-sm text-muted-foreground mt-4">
@@ -330,7 +316,7 @@ const PresaleWidget = ({
           are activity-based only.
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

@@ -1558,200 +1558,175 @@ const UserDashboard = () => {
       </div>
 
       {/* Claim Rewards Modal */}
-      <AnimatePresence>
-        {showClaimModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                if (!isClaiming) {
-                  setShowClaimModal(false);
-                  setClaimSuccess(false);
-                }
-              }}
-              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
-            />
+      {showClaimModal && (
+        <>
+          <div
+            onClick={() => {
+              if (!isClaiming) {
+                setShowClaimModal(false);
+                setClaimSuccess(false);
+              }
+            }}
+            className="fixed inset-0 bg-foreground/20 z-50"
+          />
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            >
-              <div className="mlc-card-elevated w-full max-w-md">
-                {!claimSuccess ? (
-                  <>
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                          <Gift className="w-6 h-6 text-success" />
-                        </div>
-                        <div>
-                          <h2 className="text-xl font-semibold text-foreground">
-                            Claim Rewards
-                          </h2>
-                          <p className="text-sm text-muted-foreground">
-                            Convert points to MLC
-                          </p>
-                        </div>
+          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+            <div className="mlc-card-elevated w-full max-w-md">
+              {!claimSuccess ? (
+                <>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
+                        <Gift className="w-6 h-6 text-success" />
                       </div>
-                      {!isClaiming && (
-                        <button
-                          onClick={() => setShowClaimModal(false)}
-                          className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
-                        >
-                          <X className="w-5 h-5 text-muted-foreground" />
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-xl bg-gradient-to-r from-success/10 to-primary/10 border border-success/20">
+                      <div>
+                        <h2 className="text-xl font-semibold text-foreground">
+                          Claim Rewards
+                        </h2>
                         <p className="text-sm text-muted-foreground">
-                          Available to Claim
-                        </p>
-                        <p className="text-3xl font-bold text-success mt-1">
-                          {stats.pendingRewards} Points
-                        </p>
-                      </div>
-
-                      <div className="p-4 rounded-xl bg-secondary/50">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">
-                            Points to Claim
-                          </span>
-                          <span className="font-semibold text-foreground">
-                            {stats.pendingRewards}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-muted-foreground">
-                            Conversion Rate
-                          </span>
-                          <span className="font-semibold text-foreground">
-                            100 Points = 1 MLC
-                          </span>
-                        </div>
-                        <div className="border-t border-border pt-2 mt-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-foreground">
-                              You'll Receive
-                            </span>
-                            <span className="text-lg font-bold text-primary">
-                              {(stats.pendingRewards / 100).toFixed(1)} MLC
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
-                        <p className="text-xs text-warning flex items-start gap-2">
-                          <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                          Claimed MLC will be added to your locked balance and
-                          released after the presale ends.
+                          Convert points to MLC
                         </p>
                       </div>
                     </div>
-
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={handleClaimRewards}
-                      disabled={isClaiming}
-                      className="w-full mlc-btn-primary mt-6 flex items-center justify-center gap-2"
-                    >
-                      {isClaiming ? (
-                        <>
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{
-                              duration: 1,
-                              repeat: Infinity,
-                              ease: "linear",
-                            }}
-                            className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full"
-                          />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-5 h-5" />
-                          Claim {stats.pendingRewards} Points
-                        </>
-                      )}
-                    </motion.button>
-                  </>
-                ) : (
-                  <div className="py-8 text-center">
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", duration: 0.5 }}
-                      className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4"
-                    >
-                      <CheckCircle className="w-10 h-10 text-success" />
-                    </motion.div>
-                    <h2 className="text-xl font-semibold text-foreground">
-                      Rewards Claimed!
-                    </h2>
-                    <p className="text-muted-foreground mt-2">
-                      You've received{" "}
-                      <span className="font-bold text-primary">
-                        {(stats.pendingRewards / 100).toFixed(1)} MLC
-                      </span>
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Added to your locked balance
-                    </p>
-
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        setShowClaimModal(false);
-                        setClaimSuccess(false);
-                      }}
-                      className="mlc-btn-primary mt-6"
-                    >
-                      Done
-                    </motion.button>
+                    {!isClaiming && (
+                      <button
+                        onClick={() => setShowClaimModal(false)}
+                        className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
+                      >
+                        <X className="w-5 h-5 text-muted-foreground" />
+                      </button>
+                    )}
                   </div>
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-success/10 to-primary/10 border border-success/20">
+                      <p className="text-sm text-muted-foreground">
+                        Available to Claim
+                      </p>
+                      <p className="text-3xl font-bold text-success mt-1">
+                        {stats.pendingRewards} Points
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-secondary/50">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-muted-foreground">
+                          Points to Claim
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          {stats.pendingRewards}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-muted-foreground">
+                          Conversion Rate
+                        </span>
+                        <span className="font-semibold text-foreground">
+                          100 Points = 1 MLC
+                        </span>
+                      </div>
+                      <div className="border-t border-border pt-2 mt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-foreground">
+                            You'll Receive
+                          </span>
+                          <span className="text-lg font-bold text-primary">
+                            {(stats.pendingRewards / 100).toFixed(1)} MLC
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
+                      <p className="text-xs text-warning flex items-start gap-2">
+                        <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        Claimed MLC will be added to your locked balance and
+                        released after the presale ends.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleClaimRewards}
+                    disabled={isClaiming}
+                    className="w-full mlc-btn-primary mt-6 flex items-center justify-center gap-2"
+                  >
+                    {isClaiming ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Claim {stats.pendingRewards} Points
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <div className="py-8 text-center">
+                  <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-10 h-10 text-success" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-foreground">
+                    Rewards Claimed!
+                  </h2>
+                  <p className="text-muted-foreground mt-2">
+                    You've received{" "}
+                    <span className="font-bold text-primary">
+                      {(stats.pendingRewards / 100).toFixed(1)} MLC
+                    </span>
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Added to your locked balance
+                  </p>
+
+                  <button
+                    onClick={() => {
+                      setShowClaimModal(false);
+                      setClaimSuccess(false);
+                    }}
+                    className="mlc-btn-primary mt-6"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* PaymentModal for Buy More MLC */}
-      <PaymentModal
-        isOpen={showBuyModal}
-        onClose={() => setShowBuyModal(false)}
-        onSuccess={handlePaymentSuccess}
-        amount={purchaseAmount}
-        mlcAmount={purchaseAmount / 0.001}
-      />
+      {showBuyModal && (
+        <PaymentModal
+          isOpen={showBuyModal}
+          onClose={() => setShowBuyModal(false)}
+          onSuccess={handlePaymentSuccess}
+          amount={purchaseAmount}
+          mlcAmount={purchaseAmount / 0.001}
+        />
+      )}
       {/* Join League Modal */}
       <AnimatePresence>
         {showJoinModal && selectedLeague && (
           <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowJoinModal(false)}
-              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-50"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 flex items-center justify-center z-50 p-4"
-            >
+            <div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowJoinModal(false)}
+                className="fixed inset-0 bg-foreground/20 z-50"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 flex items-center justify-center z-50 p-4"
+              />
               <div className="mlc-card-elevated w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
@@ -2032,41 +2007,31 @@ const UserDashboard = () => {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>
 
       {/* Floating Presale Widget */}
-      <AnimatePresence>
-        {showPresaleWidget && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowPresaleWidget(false)}
-              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 100, x: "-50%" }}
-              animate={{ opacity: 1, y: 0, x: "-50%" }}
-              exit={{ opacity: 0, y: 100, x: "-50%" }}
-              className="fixed bottom-4 left-1/2 z-50"
-            >
-              <div className="relative">
-                <button
-                  onClick={() => setShowPresaleWidget(false)}
-                  className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors z-10"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <PresaleWidget onBuyClick={handleWidgetBuy} />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {showPresaleWidget && (
+        <>
+          <div
+            onClick={() => setShowPresaleWidget(false)}
+            className="fixed inset-0 bg-foreground/20 z-40"
+          />
+          <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+            <div className="relative">
+              <button
+                onClick={() => setShowPresaleWidget(false)}
+                className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center hover:bg-secondary transition-colors z-10"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <PresaleWidget onBuyClick={handleWidgetBuy} />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* PaymentModal for Buy More MLC */}
       <PaymentModal
