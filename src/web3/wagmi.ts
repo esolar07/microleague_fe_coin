@@ -1,25 +1,39 @@
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import { connectorsForWallets } from "@rainbow-me/rainbowkit";
+import {
+  metaMaskWallet,
+  rainbowWallet,
+  walletConnectWallet,
+} from "@rainbow-me/rainbowkit/wallets";
 import { createConfig, http } from "wagmi";
-import { APP_CHAIN } from "@/config/network";
-import { connector } from "@/providers/CoinbaseProvider";
 import { sepolia } from "viem/chains";
 
 const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as
   | string
   | undefined;
 
-export const chains = [APP_CHAIN] as const;
+// ✅ No baseAccount here — CDP handles email login separately
+const rbkConnectors = connectorsForWallets(
+  [
+    {
+      groupName: 'Recommended',
+      wallets: [
+        metaMaskWallet,
+        rainbowWallet,
+        walletConnectWallet,
+      ],
+    },
+  ],
+  {
+    appName: 'MicroLeague',
+    projectId: walletConnectProjectId,
+  }
+);
 
-export const wagmiConfig = walletConnectProjectId
-  ? getDefaultConfig({
-      appName: "MicroLeague",
-      projectId: walletConnectProjectId,
-      chains,
-    })
-  : createConfig({
-      connectors: [connector],
-      chains: [sepolia],
-      transports: {
-        [sepolia.id]: http(),
-      },
-    });
+export const wagmiConfig = createConfig({
+  // cdpConnector is managed by CDPReactProvider — not needed here
+  connectors: [...rbkConnectors],
+  chains: [sepolia],
+  transports: {
+    [sepolia.id]: http(),
+  },
+});

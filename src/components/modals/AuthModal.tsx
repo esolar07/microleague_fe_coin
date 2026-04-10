@@ -88,23 +88,6 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const isProfileIncomplete = (profile: typeof profileData) =>
     !profile?.displayName?.trim() || !profile?.email?.trim();
 
-  // When modal opens, snapshot the current Coinbase sign-in state (only on open)
-  useEffect(() => {
-    if (isOpen) {
-      wasSignedInOnOpen.current = isSignedIn;
-      setManualSignInProgress(true);
-      // If already signed into CDP with an EVM address, skip SignInModal entirely
-      if (isSignedIn && evmAccounts?.[0]?.address && !isAuthenticated) {
-        handleCoinbaseAuth(evmAccounts[0].address);
-      }
-    } else {
-      wasSignedInOnOpen.current = false;
-      setManualSignInProgress(false);
-    }
-    // Only run when isOpen changes, NOT when isSignedIn changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
-
   const handleEmailSubmit = () => {
     if (email && email.includes("@")) {
       setStep("otp");
@@ -192,17 +175,16 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       setAuthError(null);
       setStep("coinbase-verify");
 
-      const evmAddr = walletAddress;
       const timestamp = Date.now();
-      const message = buildSignInMessage(evmAddr, timestamp);
+      const message = buildSignInMessage(walletAddress, timestamp);
 
       const { signature } = await signEvmMessage({
-        evmAccount: evmAddr as `0x${string}`,
+        evmAccount: walletAddress as `0x${string}`,
         message,
       });
 
       const result = await authenticateWallet({
-        walletAddress: evmAddr,
+        walletAddress,
         signature,
         message,
         timestamp,
@@ -230,22 +212,39 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     }
   };
 
-  // Step 1: Detect when Coinbase sign-in completes (isSignedIn becomes true).
-  // Wait for evmAccounts to populate before proceeding — avoids calling
-  // createEvmEoaAccount() on an existing account (causes "email already linked" error).
+  // Effect 1: on modal open — snapshot wasSignedIn, set manual progress
+  useEffect(() => {
+    if (isOpen) {
+      wasSignedInOnOpen.current = isSignedIn;
+      setManualSignInProgress(true);
+    } else {
+      wasSignedInOnOpen.current = false;
+      setManualSignInProgress(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]); // ← intentionally only isOpen, not isSignedIn
+
+  // Effect 2: handle case where user was ALREADY signed in when modal opened
+  // but evmAccounts populated async (after the isOpen effect fired)
+  useEffect(() => {
+    if (!isOpen || isAuthenticated || coinbaseAuthInProgress.current) return;
+    if (step === "success" || step === "coinbase-verify") return;
+    if (!wasSignedInOnOpen.current) return; // only for pre-existing sessions
+    if (!coinbaseEvmAddress) return; // wait until address is ready
+    handleCoinbaseAuth(coinbaseEvmAddress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coinbaseEvmAddress, isOpen]);
+
+  // Effect 3: handle case where user signs in fresh (isSignedIn transitions false → true)
   useEffect(() => {
     if (!isSignedIn || !isOpen || isAuthenticated) return;
     if (coinbaseAuthInProgress.current) return;
     if (step === "success" || step === "coinbase-verify") return;
-    if (wasSignedInOnOpen.current) return;
-    // Only proceed once we have an EVM address — don't try to create a new account
+    if (wasSignedInOnOpen.current) return; // ← already handled by Effect 2 above
     if (!coinbaseEvmAddress) return;
-
     handleCoinbaseAuth(coinbaseEvmAddress);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, isOpen, isAuthenticated, coinbaseEvmAddress]);
-
-  // Step 2 is no longer needed since we create the account explicitly in handleCoinbaseAuth
 
   const handleWalletSignIn = async () => {
     if (!address) return;
@@ -336,7 +335,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
     autoSignAttempted.current = true;
     handleWalletSignIn();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, step, chainId, isAuthenticated]);
 
   const handleBack = () => {
