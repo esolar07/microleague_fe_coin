@@ -1,28 +1,42 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  User, Wallet, Save, Loader2,
-  CheckCircle, AlertCircle, Camera, Calendar, Copy, Check, LogOut,
+  User,
+  Wallet,
+  Save,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Camera,
+  Calendar,
+  Copy,
+  Check,
+  LogOut,
 } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useAuth } from "@/hooks/use-auth";
 import { useDisconnect } from "wagmi";
-import { useSignOut } from "@coinbase/cdp-hooks";
-import { useNavigate } from "react-router-dom";
 import {
-  uploadAvatar,
-} from "@/services/userProfile";
+  useSignOut,
+  useEvmAccounts,
+  useCurrentUser,
+} from "@coinbase/cdp-hooks";
+import { ExportWallet } from "@coinbase/cdp-react/components/ExportWallet";
+import { useNavigate } from "react-router-dom";
+import { uploadAvatar } from "@/services/userProfile";
 import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
-import { useCurrentUser } from "@coinbase/cdp-hooks";
 
 const ProfileTab = () => {
   const { address } = useAccount();
   const { user, logout } = useAuth();
   const { currentUser } = useCurrentUser();
+  const { evmAccounts } = useEvmAccounts();
   const { disconnect } = useDisconnect();
   const { signOut } = useSignOut();
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const coinbaseWalletAddress = evmAccounts?.[0]?.address;
 
   // Avatar + copy state
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -30,15 +44,22 @@ const ProfileTab = () => {
 
   // Form state
   const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState(currentUser?.authenticationMethods?.email?.email ?? "");
+  const [email, setEmail] = useState(
+    currentUser?.authenticationMethods?.email?.email ?? "",
+  );
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
+    "idle",
+  );
 
-  const walletAddress = address ?? user?.walletAddress ?? "";
+  const walletAddress =
+    address ?? coinbaseWalletAddress ?? user?.walletAddress ?? "";
 
   // Fetch profile via React Query
-  const { data: profile, isLoading: loading } = useUserProfile(walletAddress || undefined);
+  const { data: profile, isLoading: loading } = useUserProfile(
+    walletAddress || undefined,
+  );
   const updateProfileMutation = useUpdateUserProfile(walletAddress);
 
   // Sync form when profile loads
@@ -49,7 +70,9 @@ const ProfileTab = () => {
       setBio(profile.bio ?? "");
     } else if (user?.profile) {
       setDisplayName(
-        [user.profile.firstName, user.profile.lastName].filter(Boolean).join(" ") || ""
+        [user.profile.firstName, user.profile.lastName]
+          .filter(Boolean)
+          .join(" ") || "",
       );
       setEmail(user.profile.email ?? "");
     }
@@ -115,7 +138,10 @@ const ProfileTab = () => {
 
   const joinedDate = profile?.joinedDate ?? user?.createdAt;
   const formattedJoinDate = joinedDate
-    ? new Date(joinedDate).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    ? new Date(joinedDate).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      })
     : "—";
 
   if (loading) {
@@ -179,7 +205,8 @@ const ProfileTab = () => {
             </div>
             {user?.referralId && (
               <p className="text-xs text-muted-foreground mt-1">
-                Referral ID: <span className="font-mono">{user.referralId}</span>
+                Referral ID:{" "}
+                <span className="font-mono">{user.referralId}</span>
               </p>
             )}
           </div>
@@ -188,7 +215,10 @@ const ProfileTab = () => {
         {/* Profile Form */}
         <div className="space-y-4">
           <div>
-            <label htmlFor="profile-display-name" className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="profile-display-name"
+              className="text-sm font-medium text-foreground"
+            >
               Display Name
             </label>
             <input
@@ -201,7 +231,10 @@ const ProfileTab = () => {
             />
           </div>
           <div>
-            <label htmlFor="profile-email" className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="profile-email"
+              className="text-sm font-medium text-foreground"
+            >
               Email Address
             </label>
             <div className="relative">
@@ -221,7 +254,12 @@ const ProfileTab = () => {
             </div>
           </div>
           <div>
-            <label htmlFor="profile-bio" className="text-sm font-medium text-foreground">Bio</label>
+            <label
+              htmlFor="profile-bio"
+              className="text-sm font-medium text-foreground"
+            >
+              Bio
+            </label>
             <textarea
               id="profile-bio"
               value={bio}
@@ -269,24 +307,49 @@ const ProfileTab = () => {
           <h3 className="text-lg font-semibold text-foreground">Wallet</h3>
         </div>
 
-        <div className="p-4 rounded-xl bg-secondary/50 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">Connected Wallet</p>
-            <p className="font-mono text-foreground">{truncatedWallet}</p>
-          </div>
-          <button
-            onClick={copyWallet}
-            className="mlc-btn-secondary text-sm flex items-center gap-1.5"
-            aria-label="Copy wallet address"
-          >
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            {copied ? "Copied" : "Copy"}
-          </button>
+        <div className="p-4 rounded-xl bg-secondary/50">
+          {user?.walletType === "coinbase" && coinbaseWalletAddress ? (
+            <ExportWallet
+              address={coinbaseWalletAddress}
+              className="w-full"
+              onCopySuccess={() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Connected Wallet
+                </p>
+                <p className="font-mono text-foreground">{truncatedWallet}</p>
+              </div>
+              <button
+                onClick={copyWallet}
+                className="mlc-btn-secondary text-sm flex items-center gap-1.5"
+                aria-label="Copy wallet address"
+              >
+                {copied ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </div>
+          )}
         </div>
 
         {user?.walletType && (
           <p className="text-xs text-muted-foreground mt-3">
             Wallet type: <span className="capitalize">{user.walletType}</span>
+          </p>
+        )}
+        {user?.walletType === "coinbase" && coinbaseWalletAddress && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Connected Coinbase wallet:{" "}
+            <span className="font-mono">{`${coinbaseWalletAddress.slice(0, 6)}...${coinbaseWalletAddress.slice(-4)}`}</span>
           </p>
         )}
       </div>
@@ -296,7 +359,9 @@ const ProfileTab = () => {
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium text-foreground">Sign Out</p>
-            <p className="text-sm text-muted-foreground">Disconnect your wallet and clear your session</p>
+            <p className="text-sm text-muted-foreground">
+              Disconnect your wallet and clear your session
+            </p>
           </div>
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -388,12 +453,14 @@ function ToggleRow({
         aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted-foreground/30"
-          } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+          checked ? "bg-primary" : "bg-muted-foreground/30"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       >
         <span
-          className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${checked ? "translate-x-6" : "translate-x-1"
-            }`}
+          className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+            checked ? "translate-x-6" : "translate-x-1"
+          }`}
         />
       </button>
     </div>
