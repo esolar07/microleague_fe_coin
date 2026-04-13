@@ -465,6 +465,9 @@ const PaymentModal = ({
         notes: `Presale purchase of ${displayMlc.toLocaleString()} MLC`,
       });
       setBankTransferId(result.transferId);
+      if (onTransactionSuccess) {
+        await onTransactionSuccess();
+      }
       setStep("success");
     } catch (err) {
       setBankError(err instanceof Error ? err.message : "Failed to submit bank transfer");

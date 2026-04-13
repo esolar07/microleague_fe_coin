@@ -133,7 +133,7 @@ const UserDashboard = () => {
   const { data: activityPage, isLoading: activityLoading, isError: activityError } = useActivity(effectiveAddress);
 
   // Bank transfers — fetched via react-query
-  const { data: bankTransferData = [], isLoading: bankTransferLoading } = useBankTransfers(effectiveAddress);
+  const { data: bankTransferData = [], isLoading: bankTransferLoading, refetch: refetchBankTransfers } = useBankTransfers(effectiveAddress);
 
   
 
@@ -1309,6 +1309,7 @@ const UserDashboard = () => {
         onSuccess={handlePaymentSuccess}
         amount={purchaseAmount}
         mlcAmount={purchaseAmount / 0.001}
+        onTransactionSuccess={async () => { await refetchBankTransfers(); }}
       />
       {/* Join League Modal */}
       <AnimatePresence>
@@ -1561,6 +1562,7 @@ const UserDashboard = () => {
         onSuccess={handlePaymentSuccess}
         amount={purchaseAmount}
         mlcAmount={purchaseAmount / 0.001}
+        onTransactionSuccess={async () => { await refetchBankTransfers(); }}
       />
     </div>
   );
