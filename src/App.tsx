@@ -9,7 +9,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useAutoAuth } from "@/hooks/use-auto-auth";
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
-import { chains, wagmiConfig } from "@/web3/wagmi";
+import { wagmiConfig } from "@/web3/wagmi";
 
 const Index = lazy(() => import("./pages/Index"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
@@ -58,9 +58,9 @@ const AutoAuthGate = ({ children }: { children: React.ReactNode }) => {
 };
 
 const App = () => (
-  <WagmiProvider config={wagmiConfig}>
-    <QueryClientProvider client={queryClient}>
-      <CoinbaseProvider>
+  <CoinbaseProvider>
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
         <RainbowKitProvider >
           <ThemeProvider defaultTheme="light" storageKey="mlc-ui-theme">
             <AuthProvider>
@@ -87,9 +87,9 @@ const App = () => (
             </AuthProvider>
           </ThemeProvider>
         </RainbowKitProvider>
-      </CoinbaseProvider>
-    </QueryClientProvider>
-  </WagmiProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  </CoinbaseProvider>
 );
 
 export default App;

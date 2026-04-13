@@ -25,6 +25,8 @@ export interface UpdateUserProfileRequest {
 type UserProfileResponse = {
   message: string;
   data: { profile: UserProfile };
+  token?: string;          // present when accounts were merged
+  accountsMerged?: boolean;
 };
 
 type UploadAvatarResponse = {
@@ -55,12 +57,12 @@ export async function getProfile(walletAddress: string): Promise<UserProfile> {
 export async function updateProfile(
   walletAddress: string,
   data: UpdateUserProfileRequest,
-): Promise<UserProfile> {
+): Promise<{ profile: UserProfile; newToken?: string }> {
   const response = await apiFetch<UserProfileResponse>(
     `/users/profile/${walletAddress}`,
     { method: "PUT", authToken: getAuthToken(), json: data },
   );
-  return response.data.profile;
+  return { profile: response.data.profile, newToken: response.token };
 }
 
 export async function updatePreferences(

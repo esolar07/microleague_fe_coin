@@ -8,6 +8,8 @@ import {
   UpdateUserProfileRequest,
 } from "@/services/userProfile";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import type { BackendAuthenticatedUser } from "@/lib/backend-auth";
 
 // Query keys
 export const userProfileKeys = {
@@ -38,13 +40,20 @@ export const useUserProfile = (walletAddress: string | undefined) => {
 // Update user profile hook
 export const useUpdateUserProfile = (walletAddress: string) => {
   const queryClient = useQueryClient();
+  const { login, user, token } = useAuth();
 
   return useMutation({
     mutationFn: (data: UpdateUserProfileRequest) =>
       updateProfile(walletAddress, data),
-    onSuccess: (data) => {
-      queryClient.setQueryData(userProfileKeys.profile(walletAddress), data);
-      toast.success("Profile updated successfully!");
+    onSuccess: ({ profile, newToken }) => {
+      queryClient.setQueryData(userProfileKeys.profile(walletAddress), profile);
+      // If accounts were merged, the backend issued a new token — re-login
+      if (newToken && user) {
+        login({ token: newToken, user: user as BackendAuthenticatedUser });
+        toast.success("Profile saved and accounts linked!");
+      } else {
+        toast.success("Profile updated successfully!");
+      }
     },
     onError: (error: any) => {
       toast.error(error?.message || "Failed to update profile");

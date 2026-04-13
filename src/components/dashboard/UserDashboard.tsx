@@ -54,6 +54,8 @@ import { requestSwitchChain } from "@/web3/requestSwitchChain";
 import type { ActivityRecord } from "@/services/activity";
 import { useActivity } from "@/hooks/use-activity";
 import { useLinkEmail, useSignOut } from "@coinbase/cdp-hooks";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 const tabs: {
   id: string;
@@ -152,6 +154,8 @@ const UserDashboard = () => {
   const isWalletReady = isConnected || (isAuthenticated && !!effectiveAddress);
   const isOnCorrectChain = !isConnected || chainId === APP_CHAIN.id;
 
+  const { data: profile } = useUserProfile(effectiveAddress || undefined);
+
   // Activity feed via React Query
   const {
     data: activityPage,
@@ -160,8 +164,9 @@ const UserDashboard = () => {
   } = useActivity(effectiveAddress);
 
   // Bank transfers — fetched via react-query
-  const { data: bankTransferData = [], isLoading: bankTransferLoading } =
-    useBankTransfers(effectiveAddress);
+  const { data: bankTransferData = [], isLoading: bankTransferLoading, refetch: refetchBankTransfers } = useBankTransfers(effectiveAddress);
+
+  
 
   // Get USDC balance
   const { data: usdcBalance } = useBalance({
@@ -483,8 +488,8 @@ const UserDashboard = () => {
     }
   };
 
-  const referralCode = "ABC123XY";
-  const referralLink = `https://microleague.com/ref/${referralCode}`;
+  const referralCode = user?.referralId ?? "";
+  const referralLink = referralCode ? `https://microleague.com/ref/${referralCode}` : "";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
@@ -571,17 +576,17 @@ const UserDashboard = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveTab("profile")}
-                className="relative w-10 h-10 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center overflow-hidden hover:border-primary transition-colors"
+                className="relative flex-shrink-0"
                 aria-label="Open profile"
               >
-                <span className="text-sm font-bold text-primary">
-                  {user?.profile?.firstName
-                    ? user.profile.firstName[0].toUpperCase()
-                    : address
-                      ? address.slice(2, 4).toUpperCase()
-                      : "?"}
-                </span>
-                {/* Online dot */}
+                <UserAvatar
+                  avatar={profile?.avatar}
+                  displayName={profile?.displayName}
+                  email={profile?.email}
+                  walletAddress={effectiveAddress}
+                  size="md"
+                  className="border-2 border-primary/30 hover:border-primary transition-colors"
+                />
                 {(isConnected || isAuthenticated) && (
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-success border-2 border-card" />
                 )}
@@ -1732,15 +1737,14 @@ const UserDashboard = () => {
       )}
 
       {/* PaymentModal for Buy More MLC */}
-      {showBuyModal && (
-        <PaymentModal
-          isOpen={showBuyModal}
-          onClose={() => setShowBuyModal(false)}
-          onSuccess={handlePaymentSuccess}
-          amount={purchaseAmount}
-          mlcAmount={purchaseAmount / 0.001}
-        />
-      )}
+      <PaymentModal
+        isOpen={showBuyModal}
+        onClose={() => setShowBuyModal(false)}
+        onSuccess={handlePaymentSuccess}
+        amount={purchaseAmount}
+        mlcAmount={purchaseAmount / 0.001}
+        onTransactionSuccess={async () => { await refetchBankTransfers(); }}
+      />
       {/* Join League Modal */}
       <AnimatePresence>
         {showJoinModal && selectedLeague && (
@@ -2073,6 +2077,7 @@ const UserDashboard = () => {
         onSuccess={handlePaymentSuccess}
         amount={purchaseAmount}
         mlcAmount={purchaseAmount / 0.001}
+        onTransactionSuccess={async () => { await refetchBankTransfers(); }}
       />
     </div>
   );

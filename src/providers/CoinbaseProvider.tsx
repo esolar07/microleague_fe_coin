@@ -3,9 +3,8 @@ import React from 'react'
 import { CDPReactProvider, type Config, type Theme } from "@coinbase/cdp-react";
 import { COINBASE_PROJECT_ID } from '@/config/onramp';
 import { createCDPEmbeddedWalletConnector } from '@coinbase/cdp-wagmi';
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { baseSepolia, base, sepolia } from 'viem/chains';
-import { WagmiProvider, createConfig, http, injected } from 'wagmi';
+import { sepolia } from 'viem/chains';
+import { http } from 'viem';
 
 // Your CDP config
 const cdpConfig: Config = {
@@ -29,16 +28,6 @@ export const connector = createCDPEmbeddedWalletConnector({
         }
     }
 });
-
-export const wagmiConfig = createConfig({
-    connectors: [connector],
-    chains: [sepolia],
-    transports: {
-        [sepolia.id]: http(),
-    },
-});
-
-
 
 
 const theme: Partial<Theme> = {
