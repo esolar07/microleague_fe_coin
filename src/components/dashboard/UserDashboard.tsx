@@ -164,9 +164,11 @@ const UserDashboard = () => {
   } = useActivity(effectiveAddress);
 
   // Bank transfers — fetched via react-query
-  const { data: bankTransferData = [], isLoading: bankTransferLoading, refetch: refetchBankTransfers } = useBankTransfers(effectiveAddress);
-
-  
+  const {
+    data: bankTransferData = [],
+    isLoading: bankTransferLoading,
+    refetch: refetchBankTransfers,
+  } = useBankTransfers(effectiveAddress);
 
   // Get USDC balance
   const { data: usdcBalance } = useBalance({
@@ -489,7 +491,9 @@ const UserDashboard = () => {
   };
 
   const referralCode = user?.referralId ?? "";
-  const referralLink = referralCode ? `https://microleague.com/ref/${referralCode}` : "";
+  const referralLink = referralCode
+    ? `https://microleague.com/ref/${referralCode}`
+    : "";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink);
@@ -988,9 +992,205 @@ const UserDashboard = () => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-6 relative"
+            className="relative"
           >
-            <div className="pointer-events-auto absolute inset-0 z-10 rounded-3xl  backdrop-blur-3xl border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] flex items-center justify-center p-8">
+            {/* My Active Leagues */}
+            <div className="h-[calc(94vh-200px)] overflow-y-auto scrollbar-hide py-4">
+              {myLeagues.length > 0 && (
+                <div className="">
+                  {/* <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-primary" />
+                   My Leagues
+                </h3> */}
+                  <div className="space-y-3">
+                    {myLeagues.map((league) => (
+                      <motion.div
+                        key={league.id}
+                        whileHover={{ scale: 1.005 }}
+                        className="mlc-card-elevated cursor-pointer hover:border-primary/30 transition-all"
+                        onClick={() => handleJoinLeague(league)}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                              <Trophy className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">
+                                {league.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {league.sport} · {league.type} · {league.format}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-foreground">
+                                #{league.rank}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Rank
+                              </p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-success">
+                                {league.wins}W
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                / {league.totalMatches}
+                              </p>
+                            </div>
+                            <span className="px-3 py-1 rounded-full bg-success/10 text-success text-xs font-semibold">
+                              Active
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Browse Leagues */}
+              <div className="">
+                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" /> Browse Leagues
+                </h3>
+                <div className="grid gap-4">
+                  {availableLeagues.map((league) => (
+                    <motion.div
+                      key={league.id}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mlc-card-elevated hover:border-primary/30 transition-all"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                            <Trophy className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-semibold text-foreground">
+                                {league.name}
+                              </p>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  league.status === "Open"
+                                    ? "bg-success/10 text-success"
+                                    : "bg-warning/10 text-warning"
+                                }`}
+                              >
+                                {league.status}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {league.sport} · {league.type} · by{" "}
+                              {league.creator}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {league.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* League Stats */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-secondary/50 text-center">
+                          <p className="text-xs text-muted-foreground">
+                            Players
+                          </p>
+                          <p className="text-sm font-bold text-foreground">
+                            {league.members.toLocaleString()} /{" "}
+                            {league.maxMembers.toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-secondary/50 text-center">
+                          <p className="text-xs text-muted-foreground">
+                            Entry Fee
+                          </p>
+                          <p className="text-sm font-bold text-foreground">
+                            {league.entryFee > 0
+                              ? `${league.entryFee} MLC`
+                              : "Free"}
+                          </p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-success/10 text-center">
+                          <p className="text-xs text-muted-foreground">
+                            Prize Pool
+                          </p>
+                          <p className="text-sm font-bold text-success">
+                            {league.prizePool.toLocaleString()} MLC
+                          </p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-secondary/50 text-center">
+                          <p className="text-xs text-muted-foreground">
+                            Format
+                          </p>
+                          <p className="text-sm font-bold text-foreground">
+                            {league.format}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Fill Bar */}
+                      <div className="mb-3">
+                        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                          <span>
+                            {league.members} / {league.maxMembers} players
+                          </span>
+                          <span>
+                            {Math.round(
+                              (league.members / league.maxMembers) * 100,
+                            )}
+                            % filled
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${league.status === "Full" ? "bg-warning" : "bg-primary"}`}
+                            style={{
+                              width: `${(league.members / league.maxMembers) * 100}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3 h-3" /> {league.startDate}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> {league.duration}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Shield className="w-3 h-3" /> {league.region}
+                          </span>
+                        </div>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleJoinLeague(league)}
+                          disabled={league.status === "Full"}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            league.status === "Full"
+                              ? "bg-secondary text-muted-foreground cursor-not-allowed"
+                              : "mlc-gradient-bg text-primary-foreground"
+                          }`}
+                        >
+                          {league.status === "Full" ? "Full" : "Join League"}
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="pointer-events-auto absolute h-[calc(95vh-200px)] inset-0 z-10 rounded-3xl  backdrop-blur-3xl border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] flex items-center justify-center p-8">
               <div className="text-center">
                 <p className="text-2xl md:text-3xl font-semibold text-foreground">
                   Coming Soon
@@ -998,195 +1198,6 @@ const UserDashboard = () => {
                 <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-md mx-auto">
                   Leagues are on the way — stay tuned for the full experience.
                 </p>
-              </div>
-            </div>
-            {/* My Active Leagues */}
-            {myLeagues.length > 0 && (
-              <div>
-                {/* <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-primary" />
-                   My Leagues
-                </h3> */}
-                <div className="space-y-3">
-                  {myLeagues.map((league) => (
-                    <motion.div
-                      key={league.id}
-                      whileHover={{ scale: 1.005 }}
-                      className="mlc-card-elevated cursor-pointer hover:border-primary/30 transition-all"
-                      onClick={() => handleJoinLeague(league)}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                            <Trophy className="w-6 h-6 text-primary" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-foreground">
-                              {league.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {league.sport} · {league.type} · {league.format}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-foreground">
-                              #{league.rank}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Rank
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-success">
-                              {league.wins}W
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              / {league.totalMatches}
-                            </p>
-                          </div>
-                          <span className="px-3 py-1 rounded-full bg-success/10 text-success text-xs font-semibold">
-                            Active
-                          </span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Browse Leagues */}
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" /> Browse Leagues
-              </h3>
-              <div className="grid gap-4">
-                {availableLeagues.map((league) => (
-                  <motion.div
-                    key={league.id}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mlc-card-elevated hover:border-primary/30 transition-all"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                          <Trophy className="w-6 h-6 text-primary" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-semibold text-foreground">
-                              {league.name}
-                            </p>
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                league.status === "Open"
-                                  ? "bg-success/10 text-success"
-                                  : "bg-warning/10 text-warning"
-                              }`}
-                            >
-                              {league.status}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {league.sport} · {league.type} · by {league.creator}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {league.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* League Stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                      <div className="p-2 rounded-lg bg-secondary/50 text-center">
-                        <p className="text-xs text-muted-foreground">Players</p>
-                        <p className="text-sm font-bold text-foreground">
-                          {league.members.toLocaleString()} /{" "}
-                          {league.maxMembers.toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="p-2 rounded-lg bg-secondary/50 text-center">
-                        <p className="text-xs text-muted-foreground">
-                          Entry Fee
-                        </p>
-                        <p className="text-sm font-bold text-foreground">
-                          {league.entryFee > 0
-                            ? `${league.entryFee} MLC`
-                            : "Free"}
-                        </p>
-                      </div>
-                      <div className="p-2 rounded-lg bg-success/10 text-center">
-                        <p className="text-xs text-muted-foreground">
-                          Prize Pool
-                        </p>
-                        <p className="text-sm font-bold text-success">
-                          {league.prizePool.toLocaleString()} MLC
-                        </p>
-                      </div>
-                      <div className="p-2 rounded-lg bg-secondary/50 text-center">
-                        <p className="text-xs text-muted-foreground">Format</p>
-                        <p className="text-sm font-bold text-foreground">
-                          {league.format}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Fill Bar */}
-                    <div className="mb-3">
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>
-                          {league.members} / {league.maxMembers} players
-                        </span>
-                        <span>
-                          {Math.round(
-                            (league.members / league.maxMembers) * 100,
-                          )}
-                          % filled
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${league.status === "Full" ? "bg-warning" : "bg-primary"}`}
-                          style={{
-                            width: `${(league.members / league.maxMembers) * 100}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" /> {league.startDate}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {league.duration}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Shield className="w-3 h-3" /> {league.region}
-                        </span>
-                      </div>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleJoinLeague(league)}
-                        disabled={league.status === "Full"}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                          league.status === "Full"
-                            ? "bg-secondary text-muted-foreground cursor-not-allowed"
-                            : "mlc-gradient-bg text-primary-foreground"
-                        }`}
-                      >
-                        {league.status === "Full" ? "Full" : "Join League"}
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                ))}
               </div>
             </div>
           </motion.div>
@@ -1221,7 +1232,7 @@ const UserDashboard = () => {
             className="relative"
           >
             <PredictionPolls />
-            <div className="pointer-events-auto absolute inset-0 z-10 rounded-3xl  backdrop-blur-3xl border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] flex items-center justify-center p-8">
+            <div className="pointer-events-auto absolute h-[calc(95vh-200px)] inset-0 z-10 rounded-3xl  backdrop-blur-3xl border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] flex items-center justify-center p-8">
               <div className="text-center">
                 <p className="text-2xl md:text-3xl font-semibold text-foreground">
                   Coming Soon
@@ -1743,7 +1754,9 @@ const UserDashboard = () => {
         onSuccess={handlePaymentSuccess}
         amount={purchaseAmount}
         mlcAmount={purchaseAmount / 0.001}
-        onTransactionSuccess={async () => { await refetchBankTransfers(); }}
+        onTransactionSuccess={async () => {
+          await refetchBankTransfers();
+        }}
       />
       {/* Join League Modal */}
       <AnimatePresence>
@@ -2077,7 +2090,9 @@ const UserDashboard = () => {
         onSuccess={handlePaymentSuccess}
         amount={purchaseAmount}
         mlcAmount={purchaseAmount / 0.001}
-        onTransactionSuccess={async () => { await refetchBankTransfers(); }}
+        onTransactionSuccess={async () => {
+          await refetchBankTransfers();
+        }}
       />
     </div>
   );

@@ -217,7 +217,7 @@ const PredictionPolls = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-[calc(95vh-200px)] overflow-y-auto scrollbar-hide py-4">
       {/* Header Banner */}
       <div className="mlc-card-elevated bg-gradient-to-r from-warning/10 via-primary/5 to-warning/10 border-warning/20">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
