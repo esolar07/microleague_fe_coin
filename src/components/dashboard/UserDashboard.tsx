@@ -983,14 +983,25 @@ const UserDashboard = () => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
+            className="space-y-6 relative"
           >
+            <div className="pointer-events-auto absolute inset-0 z-10 rounded-3xl  backdrop-blur-3xl border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] flex items-center justify-center p-8">
+              <div className="text-center">
+                <p className="text-2xl md:text-3xl font-semibold text-foreground">
+                  Coming Soon
+                </p>
+                <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-md mx-auto">
+                  Leagues are on the way — stay tuned for the full experience.
+                </p>
+              </div>
+            </div>
             {/* My Active Leagues */}
             {myLeagues.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-primary" /> My Leagues
-                </h3>
+                {/* <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-primary" />
+                   My Leagues
+                </h3> */}
                 <div className="space-y-3">
                   {myLeagues.map((league) => (
                     <motion.div
@@ -1181,8 +1192,19 @@ const UserDashboard = () => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            className="relative"
           >
             <QuestsSection />
+            <div className="pointer-events-auto absolute inset-0 z-10 rounded-3xl  backdrop-blur-3xl border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] flex items-center justify-center p-8">
+              <div className="text-center">
+                <p className="text-2xl md:text-3xl font-semibold text-foreground">
+                  Coming Soon
+                </p>
+                <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-md mx-auto">
+                  Quests are being built and will be available soon.
+                </p>
+              </div>
+            </div>
           </motion.div>
         )}
 
@@ -1191,8 +1213,19 @@ const UserDashboard = () => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            className="relative"
           >
             <PredictionPolls />
+            <div className="pointer-events-auto absolute inset-0 z-10 rounded-3xl  backdrop-blur-3xl border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] flex items-center justify-center p-8">
+              <div className="text-center">
+                <p className="text-2xl md:text-3xl font-semibold text-foreground">
+                  Coming Soon
+                </p>
+                <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-md mx-auto">
+                  Predictions are launching shortly — check back soon.
+                </p>
+              </div>
+            </div>
           </motion.div>
         )}
 
