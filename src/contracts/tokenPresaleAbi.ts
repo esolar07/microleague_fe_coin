@@ -12,6 +12,12 @@ export const tokenPresaleAbi = [
   { inputs: [], name: "ClaimNotEnabled", type: "error" },
   { inputs: [], name: "ClaimNotStarted", type: "error" },
   { inputs: [], name: "DirectEthNotAllowed", type: "error" },
+  { inputs: [], name: "EmergencyAlreadyRequested", type: "error" },
+  {
+    inputs: [{ internalType: "uint256", name: "availableAt", type: "uint256" }],
+    name: "EmergencyTimelockNotElapsed",
+    type: "error",
+  },
   { inputs: [], name: "EnforcedPause", type: "error" },
   { inputs: [], name: "ExpectedPause", type: "error" },
   { inputs: [], name: "InsufficientContractBalance", type: "error" },
@@ -148,6 +154,19 @@ export const tokenPresaleAbi = [
     type: "event",
   },
   { anonymous: false, inputs: [], name: "EmergencyModeEnabled", type: "event" },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "availableAt",
+        type: "uint256",
+      },
+    ],
+    name: "EmergencyModeRequested",
+    type: "event",
+  },
   {
     anonymous: false,
     inputs: [
@@ -554,6 +573,13 @@ export const tokenPresaleAbi = [
   },
   {
     inputs: [],
+    name: "emergencyModeRequestTime",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "emergencyWithdraw",
     outputs: [],
     stateMutability: "nonpayable",
@@ -718,6 +744,13 @@ export const tokenPresaleAbi = [
   {
     inputs: [],
     name: "renounceOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "requestEmergencyMode",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -908,6 +941,7 @@ export const tokenPresaleAbi = [
       { internalType: "uint256", name: "cliff", type: "uint256" },
       { internalType: "uint256", name: "duration", type: "uint256" },
       { internalType: "uint256", name: "releaseInterval", type: "uint256" },
+      { internalType: "uint256", name: "stageId", type: "uint256" },
     ],
     stateMutability: "view",
     type: "function",
