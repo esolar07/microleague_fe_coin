@@ -65,6 +65,7 @@ const tabs: {
 }[] = [
   { id: "overview", label: "Overview", icon: TrendingUp },
   { id: "simulations", label: "Simulations", icon: Gamepad2 },
+  { id: "tournaments", label: "Tournaments", icon: Trophy },
   { id: "tokens", label: "My Tokens", icon: Coins },
   { id: "predictions", label: "Predictions", icon: Trophy, badge: "New" },
   { id: "quests", label: "Quests", icon: Star, badge: "New" },
@@ -146,6 +147,13 @@ const UserDashboard = () => {
   const navigate = useNavigate();
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+
+  const openSimulationModal = () =>
+    (window.location.href =
+      "https://staging.microleaguesports.com/dashboard?modal=simulate");
+  const openTournamentModal = () =>
+    (window.location.href =
+      "https://staging.microleaguesports.com/dashboard?modal=tournament");
 
   // Coinbase email login goes through CDP SDK (not wagmi), so wagmi won't have the address.
   // Fall back to the auth context's wallet address in that case.
@@ -1456,6 +1464,7 @@ const UserDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={openSimulationModal}
                 className="mlc-btn-primary text-lg px-8 py-4 inline-flex items-center gap-2"
               >
                 Launch Simulation
@@ -1479,6 +1488,57 @@ const UserDashboard = () => {
                 <TrendingUp className="w-8 h-8 text-warning mb-3" />
                 <p className="text-2xl font-bold text-foreground">0</p>
                 <p className="text-sm text-muted-foreground">Win Rate</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Tournaments Tab */}
+        {activeTab === "tournaments" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="mlc-card-elevated text-center py-12">
+              <div className="w-20 h-20 rounded-2xl mlc-gradient-bg flex items-center justify-center mx-auto mb-6">
+                <Trophy className="w-10 h-10 text-primary-foreground" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Tournament Hub
+              </h2>
+              <p className="text-muted-foreground max-w-lg mx-auto mb-8">
+                Discover upcoming tournaments, join competition pools, and track
+                your standings.
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={openTournamentModal}
+                className="mlc-btn-primary text-lg px-8 py-4 inline-flex items-center gap-2"
+              >
+                View Tournaments
+                <ExternalLink className="w-5 h-5" />
+              </motion.button>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="mlc-card">
+                <Trophy className="w-8 h-8 text-primary mb-3" />
+                <p className="text-2xl font-bold text-foreground">0</p>
+                <p className="text-sm text-muted-foreground">
+                  Active Tournaments
+                </p>
+              </div>
+              <div className="mlc-card">
+                <Users className="w-8 h-8 text-success mb-3" />
+                <p className="text-2xl font-bold text-foreground">0</p>
+                <p className="text-sm text-muted-foreground">Teams Joined</p>
+              </div>
+              <div className="mlc-card">
+                <Sparkles className="w-8 h-8 text-warning mb-3" />
+                <p className="text-2xl font-bold text-foreground">0</p>
+                <p className="text-sm text-muted-foreground">Prize Pools</p>
               </div>
             </div>
           </motion.div>
