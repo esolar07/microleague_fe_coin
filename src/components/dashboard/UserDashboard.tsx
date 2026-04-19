@@ -56,6 +56,8 @@ import { useActivity } from "@/hooks/use-activity";
 import { useLinkEmail, useSignOut } from "@coinbase/cdp-hooks";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { redirectWithSso } from "@/services/sso";
+import { SSO_URLS } from "@/config/sso";
 
 const tabs: {
   id: string;
@@ -137,23 +139,45 @@ const UserDashboard = () => {
   const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">(
     "details",
   );
+  const [isSsoRedirecting, setIsSsoRedirecting] = useState(false);
 
   // Wallet connection and auth
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
-  const { isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, logout, user, token } = useAuth();
   const { signOut } = useSignOut();
   const navigate = useNavigate();
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+  // SSO-enabled redirects to simulation frontend
+  const openSimulationModal = async () => {
+    const targetUrl = SSO_URLS.simulation.simulate;
 
-  const openSimulationModal = () =>
-    (window.location.href =
-      "https://staging.microleaguesports.com/dashboard?modal=simulate");
-  const openTournamentModal = () =>
-    (window.location.href =
-      "https://staging.microleaguesports.com/dashboard?modal=tournament");
+    if (isAuthenticated && token) {
+      // User is authenticated - use SSO
+      setIsSsoRedirecting(true);
+      await redirectWithSso(targetUrl, token);
+      // Note: setIsSsoRedirecting(false) not needed as page will redirect
+    } else {
+      // User not authenticated - direct redirect
+      window.location.href = targetUrl;
+    }
+  };
+
+  const openTournamentModal = async () => {
+    const targetUrl = SSO_URLS.simulation.tournament;
+
+    if (isAuthenticated && token) {
+      // User is authenticated - use SSO
+      setIsSsoRedirecting(true);
+      await redirectWithSso(targetUrl, token);
+      // Note: setIsSsoRedirecting(false) not needed as page will redirect
+    } else {
+      // User not authenticated - direct redirect
+      window.location.href = targetUrl;
+    }
+  };
 
   // Coinbase email login goes through CDP SDK (not wagmi), so wagmi won't have the address.
   // Fall back to the auth context's wallet address in that case.
@@ -2154,6 +2178,21 @@ const UserDashboard = () => {
           await refetchBankTransfers();
         }}
       />
+
+      {/* SSO Redirect Loading Overlay */}
+      {isSsoRedirecting && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="mlc-card-elevated p-8 text-center">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Redirecting...
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Setting up your secure session
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
