@@ -7,7 +7,7 @@ import {
 import { createConfig, http } from "wagmi";
 import { connector as cdpConnector } from "@/providers/CoinbaseProvider";
 import { APP_CHAIN } from "@/config/network";
-import { sepolia } from "viem/chains";
+import { baseSepolia, sepolia } from "viem/chains";
 
 const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as
   | string
@@ -30,15 +30,16 @@ const rbkConnectors = connectorsForWallets(
   {
     appName: "MicroLeague",
     projectId: walletConnectProjectId ?? "dummy",
-  }
+  },
 );
 
 export const wagmiConfig = createConfig({
   // cdpConnector MUST be here — it bridges the CDP email/SMS session into wagmi
   // so useAccount / useSignMessage work after the user signs in via SignInModal.
   connectors: [...rbkConnectors, cdpConnector],
-  chains: [sepolia],
+  chains: [baseSepolia],
   transports: {
-    [sepolia.id]: http(),
+    // [sepolia.id]: http(),
+    [baseSepolia.id]: http(),
   },
 });

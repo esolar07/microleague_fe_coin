@@ -56,6 +56,8 @@ import { useActivity } from "@/hooks/use-activity";
 import { useLinkEmail, useSignOut } from "@coinbase/cdp-hooks";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { redirectWithSso } from "@/services/sso";
+import { SSO_URLS } from "@/config/sso";
 
 const tabs: {
   id: string;
@@ -65,6 +67,7 @@ const tabs: {
 }[] = [
   { id: "overview", label: "Overview", icon: TrendingUp },
   { id: "simulations", label: "Simulations", icon: Gamepad2 },
+  { id: "tournaments", label: "Tournaments", icon: Trophy },
   { id: "tokens", label: "My Tokens", icon: Coins },
   { id: "predictions", label: "Predictions", icon: Trophy, badge: "New" },
   { id: "quests", label: "Quests", icon: Star, badge: "New" },
@@ -136,16 +139,45 @@ const UserDashboard = () => {
   const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">(
     "details",
   );
+  const [isSsoRedirecting, setIsSsoRedirecting] = useState(false);
 
   // Wallet connection and auth
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
-  const { isAuthenticated, logout, user } = useAuth();
+  const { isAuthenticated, logout, user, token } = useAuth();
   const { signOut } = useSignOut();
   const navigate = useNavigate();
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+  // SSO-enabled redirects to simulation frontend
+  const openSimulationModal = async () => {
+    const targetUrl = SSO_URLS.simulation.simulate;
+
+    if (isAuthenticated && token) {
+      // User is authenticated - use SSO
+      setIsSsoRedirecting(true);
+      await redirectWithSso(targetUrl, token);
+      // Note: setIsSsoRedirecting(false) not needed as page will redirect
+    } else {
+      // User not authenticated - direct redirect
+      window.location.href = targetUrl;
+    }
+  };
+
+  const openTournamentModal = async () => {
+    const targetUrl = SSO_URLS.simulation.tournament;
+
+    if (isAuthenticated && token) {
+      // User is authenticated - use SSO
+      setIsSsoRedirecting(true);
+      await redirectWithSso(targetUrl, token);
+      // Note: setIsSsoRedirecting(false) not needed as page will redirect
+    } else {
+      // User not authenticated - direct redirect
+      window.location.href = targetUrl;
+    }
+  };
 
   // Coinbase email login goes through CDP SDK (not wagmi), so wagmi won't have the address.
   // Fall back to the auth context's wallet address in that case.
@@ -1456,6 +1488,7 @@ const UserDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={openSimulationModal}
                 className="mlc-btn-primary text-lg px-8 py-4 inline-flex items-center gap-2"
               >
                 Launch Simulation
@@ -1479,6 +1512,57 @@ const UserDashboard = () => {
                 <TrendingUp className="w-8 h-8 text-warning mb-3" />
                 <p className="text-2xl font-bold text-foreground">0</p>
                 <p className="text-sm text-muted-foreground">Win Rate</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Tournaments Tab */}
+        {activeTab === "tournaments" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="mlc-card-elevated text-center py-12">
+              <div className="w-20 h-20 rounded-2xl mlc-gradient-bg flex items-center justify-center mx-auto mb-6">
+                <Trophy className="w-10 h-10 text-primary-foreground" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground mb-2">
+                Tournament Hub
+              </h2>
+              <p className="text-muted-foreground max-w-lg mx-auto mb-8">
+                Discover upcoming tournaments, join competition pools, and track
+                your standings.
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={openTournamentModal}
+                className="mlc-btn-primary text-lg px-8 py-4 inline-flex items-center gap-2"
+              >
+                View Tournaments
+                <ExternalLink className="w-5 h-5" />
+              </motion.button>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="mlc-card">
+                <Trophy className="w-8 h-8 text-primary mb-3" />
+                <p className="text-2xl font-bold text-foreground">0</p>
+                <p className="text-sm text-muted-foreground">
+                  Active Tournaments
+                </p>
+              </div>
+              <div className="mlc-card">
+                <Users className="w-8 h-8 text-success mb-3" />
+                <p className="text-2xl font-bold text-foreground">0</p>
+                <p className="text-sm text-muted-foreground">Teams Joined</p>
+              </div>
+              <div className="mlc-card">
+                <Sparkles className="w-8 h-8 text-warning mb-3" />
+                <p className="text-2xl font-bold text-foreground">0</p>
+                <p className="text-sm text-muted-foreground">Prize Pools</p>
               </div>
             </div>
           </motion.div>
@@ -2094,6 +2178,21 @@ const UserDashboard = () => {
           await refetchBankTransfers();
         }}
       />
+
+      {/* SSO Redirect Loading Overlay */}
+      {isSsoRedirecting && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="mlc-card-elevated p-8 text-center">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Redirecting...
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Setting up your secure session
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

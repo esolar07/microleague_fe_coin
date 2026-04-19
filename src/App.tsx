@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useAutoAuth } from "@/hooks/use-auto-auth";
+import { useSsoExchange } from "@/hooks/use-sso-exchange";
 import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
 import { wagmiConfig } from "@/web3/wagmi";
@@ -26,7 +27,8 @@ const queryClient = new QueryClient({
     queries: {
       retry: (failureCount, error: unknown) => {
         // Don't retry on 401 — stale CDP session, let it fail silently
-        if (error instanceof Error && error.message.includes("401")) return false;
+        if (error instanceof Error && error.message.includes("401"))
+          return false;
         return failureCount < 2;
       },
     },
@@ -38,7 +40,6 @@ const queryClient = new QueryClient({
     },
   },
 });
-
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -54,6 +55,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // Runs inside AuthProvider + WagmiProvider — auto-signs if wallet connected but no session
 const AutoAuthGate = ({ children }: { children: React.ReactNode }) => {
   useAutoAuth();
+  useSsoExchange(); // Handle SSO token exchange on app load
   return <>{children}</>;
 };
 
@@ -61,7 +63,7 @@ const App = () => (
   <CoinbaseProvider>
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider >
+        <RainbowKitProvider>
           <ThemeProvider defaultTheme="light" storageKey="mlc-ui-theme">
             <AuthProvider>
               <TooltipProvider>
@@ -73,11 +75,31 @@ const App = () => (
                       <Routes>
                         <Route path="/" element={<Index />} />
                         <Route path="/simulate" element={<SimulatePage />} />
-                        <Route path="/tournament" element={<TournamentPage />} />
+                        <Route
+                          path="/tournament"
+                          element={<TournamentPage />}
+                        />
                         <Route path="/clubhouse" element={<ClubhousePage />} />
-                        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-                        <Route path="/creator" element={<ProtectedRoute><CreatorPage /></ProtectedRoute>} />
-                        <Route path="/leaderboard" element={<LeaderboardPage />} />
+                        <Route
+                          path="/dashboard"
+                          element={
+                            <ProtectedRoute>
+                              <DashboardPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/creator"
+                          element={
+                            <ProtectedRoute>
+                              <CreatorPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/leaderboard"
+                          element={<LeaderboardPage />}
+                        />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Suspense>
