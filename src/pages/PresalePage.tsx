@@ -91,7 +91,7 @@ const PresalePage = () => {
             onClick={() => setShowPresaleWidget(false)}
             className="fixed inset-0 bg-foreground/20 z-40"
           />
-          <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="fixed bottom-4 sm:bottom-20 left-1/2 transform -translate-x-1/2 z-50 w-[calc(100%-2rem)] sm:w-auto max-w-md px-4 sm:px-0">
             <div className="relative">
               <button
                 onClick={() => setShowPresaleWidget(false)}

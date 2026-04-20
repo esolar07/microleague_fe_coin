@@ -3,9 +3,9 @@ import { Layers, ArrowRight, Shield, Zap } from "lucide-react";
 
 const InfrastructureSection = () => {
   return (
-    <section className="mlc-section bg-foreground text-background">
-      <div className="mlc-container">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+    <section className="mlc-section bg-foreground text-background overflow-hidden">
+      <div className="mlc-container px-4">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Visual */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -26,11 +26,17 @@ const InfrastructureSection = () => {
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-                      <span className="text-primary-foreground font-bold text-sm">MLC</span>
+                      <span className="text-primary-foreground font-bold text-sm">
+                        MLC
+                      </span>
                     </div>
                     <div>
-                      <p className="font-semibold text-background">MicroLeague App-Chain</p>
-                      <p className="text-sm text-background/60">Future: Custom L2</p>
+                      <p className="font-semibold text-background">
+                        MicroLeague App-Chain
+                      </p>
+                      <p className="text-sm text-background/60">
+                        Future: Custom L2
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -48,11 +54,17 @@ const InfrastructureSection = () => {
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-                      <span className="text-primary-foreground font-bold text-sm">🔵</span>
+                      <span className="text-primary-foreground font-bold text-sm">
+                        🔵
+                      </span>
                     </div>
                     <div>
-                      <p className="font-semibold text-background">Base Network</p>
-                      <p className="text-sm text-background/60">Current: Ethereum L2</p>
+                      <p className="font-semibold text-background">
+                        Base Network
+                      </p>
+                      <p className="text-sm text-background/60">
+                        Current: Ethereum L2
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -73,8 +85,12 @@ const InfrastructureSection = () => {
                       <Layers className="w-5 h-5 text-background" />
                     </div>
                     <div>
-                      <p className="font-semibold text-background">Ethereum Mainnet</p>
-                      <p className="text-sm text-background/60">Foundation: L1 Security</p>
+                      <p className="font-semibold text-background">
+                        Ethereum Mainnet
+                      </p>
+                      <p className="text-sm text-background/60">
+                        Foundation: L1 Security
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -98,8 +114,8 @@ const InfrastructureSection = () => {
               The Tech Stack
             </h2>
             <p className="text-lg text-background/70 mb-8">
-              Running on Base right now. Building our own chain next. 
-              You will not have to do anything when we upgrade.
+              Running on Base right now. Building our own chain next. You will
+              not have to do anything when we upgrade.
             </p>
 
             <div className="space-y-4">
@@ -108,9 +124,12 @@ const InfrastructureSection = () => {
                   <Shield className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-background">Works Everywhere</h3>
+                  <h3 className="font-semibold text-background">
+                    Works Everywhere
+                  </h3>
                   <p className="text-sm text-background/60">
-                    Bridging between chains happens automatically. No manual work needed.
+                    Bridging between chains happens automatically. No manual
+                    work needed.
                   </p>
                 </div>
               </div>
@@ -120,9 +139,12 @@ const InfrastructureSection = () => {
                   <Zap className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-background">Smooth Upgrades</h3>
+                  <h3 className="font-semibold text-background">
+                    Smooth Upgrades
+                  </h3>
                   <p className="text-sm text-background/60">
-                    When we move to our own chain, your experience stays the same. Just faster.
+                    When we move to our own chain, your experience stays the
+                    same. Just faster.
                   </p>
                 </div>
               </div>

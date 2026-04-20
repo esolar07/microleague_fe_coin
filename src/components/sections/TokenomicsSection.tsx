@@ -2,32 +2,63 @@ import { motion } from "framer-motion";
 import { AlertTriangle, Shield } from "lucide-react";
 
 const tokenomicsData = [
-  { label: "Presale", percentage: 20, color: "#3B82F6", bgClass: "bg-blue-500" },
-  { label: "Community Rewards", percentage: 30, color: "#10B981", bgClass: "bg-emerald-500" },
-  { label: "Treasury Reserve", percentage: 25, color: "#F59E0B", bgClass: "bg-amber-500" },
-  { label: "Team & Advisors", percentage: 15, color: "#8B5CF6", bgClass: "bg-violet-500" },
-  { label: "Liquidity & MM", percentage: 5, color: "#EC4899", bgClass: "bg-pink-500" },
-  { label: "Ecosystem Partnerships", percentage: 5, color: "#06B6D4", bgClass: "bg-cyan-500" },
+  {
+    label: "Presale",
+    percentage: 20,
+    color: "#3B82F6",
+    bgClass: "bg-blue-500",
+  },
+  {
+    label: "Community Rewards",
+    percentage: 30,
+    color: "#10B981",
+    bgClass: "bg-emerald-500",
+  },
+  {
+    label: "Treasury Reserve",
+    percentage: 25,
+    color: "#F59E0B",
+    bgClass: "bg-amber-500",
+  },
+  {
+    label: "Team & Advisors",
+    percentage: 15,
+    color: "#8B5CF6",
+    bgClass: "bg-violet-500",
+  },
+  {
+    label: "Liquidity & MM",
+    percentage: 5,
+    color: "#EC4899",
+    bgClass: "bg-pink-500",
+  },
+  {
+    label: "Ecosystem Partnerships",
+    percentage: 5,
+    color: "#06B6D4",
+    bgClass: "bg-cyan-500",
+  },
 ];
 
 const TokenomicsSection = () => {
   return (
-    <section className="mlc-section bg-secondary/30">
-      <div className="mlc-container">
+    <section className="mlc-section bg-secondary/30 overflow-hidden">
+      <div className="mlc-container px-4">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center max-w-3xl mx-auto mb-16"
+          className="text-center max-w-3xl mx-auto mb-12 md:mb-16"
         >
           <span className="mlc-badge-primary mb-4">Token Economics</span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Where the Tokens Go
           </h2>
           <p className="text-lg text-muted-foreground">
-            No hidden allocations. No surprise unlocks. Here is exactly how we split the supply.
+            No hidden allocations. No surprise unlocks. Here is exactly how we
+            split the supply.
           </p>
         </motion.div>
 
@@ -47,19 +78,19 @@ const TokenomicsSection = () => {
                   const startAngle = cumulativePercent * 3.6 - 90;
                   cumulativePercent += item.percentage;
                   const endAngle = cumulativePercent * 3.6 - 90;
-                  
+
                   const startRad = (startAngle * Math.PI) / 180;
                   const endRad = (endAngle * Math.PI) / 180;
-                  
+
                   const x1 = 50 + 40 * Math.cos(startRad);
                   const y1 = 50 + 40 * Math.sin(startRad);
                   const x2 = 50 + 40 * Math.cos(endRad);
                   const y2 = 50 + 40 * Math.sin(endRad);
-                  
+
                   const largeArc = item.percentage > 50 ? 1 : 0;
-                  
+
                   const pathD = `M 50 50 L ${x1} ${y1} A 40 40 0 ${largeArc} 1 ${x2} ${y2} Z`;
-                  
+
                   return (
                     <motion.path
                       key={index}
@@ -98,9 +129,13 @@ const TokenomicsSection = () => {
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-4 h-4 rounded-full ${item.bgClass}`} />
-                  <span className="font-medium text-foreground">{item.label}</span>
+                  <span className="font-medium text-foreground">
+                    {item.label}
+                  </span>
                 </div>
-                <span className="text-lg font-bold text-foreground">{item.percentage}%</span>
+                <span className="text-lg font-bold text-foreground">
+                  {item.percentage}%
+                </span>
               </motion.div>
             ))}
           </div>
@@ -112,19 +147,23 @@ const TokenomicsSection = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.5 }}
-          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-16 max-w-6xl mx-auto"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 mt-16 max-w-6xl mx-auto px-4"
         >
           {[
-            { label: "Total Supply", value: "1,000,000,000 MLC" },
-            { label: "Presale Phase 1 Price", value: "$0.01" },
-            { label: "Presale - Phase 1 Ends", value: "Jan 15, 2026" },
-            { label: "Presale - Phase 2 Price", value: "$0.015" },
+            { label: "Total Supply", value: "1B MLC" },
+            { label: "Phase 1 Price", value: "$0.01" },
+            { label: "Phase 1 Ends", value: "Jan 15, 2026" },
+            { label: "Phase 2 Price", value: "$0.015" },
             { label: "Launch Price", value: "TBD" },
             { label: "Blockchain", value: "Base" },
           ].map((metric, index) => (
-            <div key={index} className="mlc-card text-center">
-              <p className="text-lg font-bold text-foreground">{metric.value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{metric.label}</p>
+            <div key={index} className="mlc-card text-center p-3">
+              <p className="text-sm md:text-lg font-bold text-foreground break-words">
+                {metric.value}
+              </p>
+              <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
+                {metric.label}
+              </p>
             </div>
           ))}
         </motion.div>
@@ -143,14 +182,18 @@ const TokenomicsSection = () => {
                 <AlertTriangle className="w-6 h-6 text-destructive" />
               </div>
               <div>
-                <h4 className="font-semibold text-foreground mb-2">Important Security Information</h4>
+                <h4 className="font-semibold text-foreground mb-2">
+                  Important Security Information
+                </h4>
                 <p className="text-sm text-muted-foreground mb-3">
-                  <strong>Risk Warning:</strong> Crypto assets are high risk. This site is informational and not financial advice.
+                  <strong>Risk Warning:</strong> Crypto assets are high risk.
+                  This site is informational and not financial advice.
                 </p>
                 <div className="flex items-start gap-2">
                   <Shield className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-muted-foreground">
-                    <strong>Never share:</strong> Your private keys, seed phrases, or wallet passwords with anyone.
+                    <strong>Never share:</strong> Your private keys, seed
+                    phrases, or wallet passwords with anyone.
                   </p>
                 </div>
               </div>
