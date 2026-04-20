@@ -46,6 +46,6 @@ export async function redirectWithSso(
   } catch (error) {
     console.error("SSO redirect failed:", error);
     // Fallback: redirect without SSO token (user will need to log in)
-    // window.location.href = targetUrl;
+    window.location.href = targetUrl;
   }
 }
