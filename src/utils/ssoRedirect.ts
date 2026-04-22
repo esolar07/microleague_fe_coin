@@ -77,7 +77,7 @@ export async function redirectWithSso(
   jwt?: string | null,
 ): Promise<void> {
   const url = await generateSsoRedirectUrl(targetUrl, jwt);
-  window.location.href = url;
+  window.open(url, "_blank");
 }
 
 /**
@@ -88,14 +88,14 @@ export const ssoRedirects = {
    * Redirect to simulation frontend - public page (no auth required)
    */
   simulatePublic: async () => {
-    window.location.href = `${SIMULATION_FRONTEND_URL}/simulate`;
+    window.open(`${SIMULATION_FRONTEND_URL}/simulate`, "_blank");
   },
 
   /**
    * Redirect to tournament frontend - public page (no auth required)
    */
   tournamentPublic: async () => {
-    window.location.href = `${SIMULATION_FRONTEND_URL}/tournament`;
+    window.open(`${SIMULATION_FRONTEND_URL}/tournament`, "_blank");
   },
 
   /**
