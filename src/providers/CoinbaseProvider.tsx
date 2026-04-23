@@ -14,7 +14,7 @@ const cdpConfig: Config = {
   },
   appName: "MicroLeague",
   appLogoUrl: "",
-  authMethods: ["email", "sms"],
+  authMethods: ["email"],
   showCoinbaseFooter: true,
 };
 
