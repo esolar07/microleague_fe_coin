@@ -35,7 +35,7 @@ import {
 } from "@/config/presale";
 import { erc20Abi } from "@/contracts/erc20Abi";
 import { tokenPresaleAbi } from "@/contracts/tokenPresaleAbi";
-import { approveErc20, buyWithToken } from "@/services/presale";
+import { approveErc20, buyWithToken, getAllowance } from "@/services/presale";
 import { fetchOnrampUrl } from "@/services/onramp";
 import { COINBASE_PROJECT_ID } from "@/config/onramp";
 import { formatBlockchainError } from "@/utils/formatError";
@@ -315,7 +315,11 @@ const PaymentModal = ({
 
       setStep("processing");
 
-      if (needsApproval) {
+      const freshAllowance = address
+        ? await getAllowance({ token: USDC_ADDRESS, owner: address, spender: PRESALE_ADDRESS })
+        : 0n;
+
+      if (freshAllowance < requiredUsdc) {
         setIsApproving(true);
         const approvalHash = await approveErc20({
           token: USDC_ADDRESS,
@@ -323,6 +327,21 @@ const PaymentModal = ({
           amount: requiredUsdc,
         });
         setTxHash(approvalHash);
+
+        // Poll until the RPC node reflects the confirmed allowance
+        let confirmedAllowance = 0n;
+        for (let i = 0; i < 10; i++) {
+          confirmedAllowance = address
+            ? await getAllowance({ token: USDC_ADDRESS, owner: address, spender: PRESALE_ADDRESS })
+            : 0n;
+          if (confirmedAllowance >= requiredUsdc) break;
+          await new Promise((r) => setTimeout(r, 2_000));
+        }
+        if (confirmedAllowance < requiredUsdc) {
+          throw new Error("Approval not confirmed. Please try again.");
+        }
+
+        setIsApproving(false);
         try {
           await refetchAllowance();
         } catch {
@@ -365,10 +384,11 @@ const PaymentModal = ({
       setIsBuying(false);
     }
   }, [
+    address,
     ensureCorrectChain,
     expectedTokens,
     insufficientFunds,
-    needsApproval,
+    onTransactionSuccess,
     refetchAllowance,
     requiredUsdc,
     isConnected,
