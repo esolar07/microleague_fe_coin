@@ -42,10 +42,10 @@ export async function redirectWithSso(
   try {
     const ssoToken = await generateSsoToken(jwt);
     const separator = targetUrl.includes("?") ? "&" : "?";
-    window.location.href = `${targetUrl}${separator}sso=${ssoToken}`;
+    window.open(`${targetUrl}${separator}sso=${ssoToken}`, "_blank");
   } catch (error) {
     console.error("SSO redirect failed:", error);
     // Fallback: redirect without SSO token (user will need to log in)
-    // window.location.href = targetUrl;
+    window.open(targetUrl, "_blank");
   }
 }
