@@ -132,12 +132,9 @@ const ACTIVITY_ICON_MAP: Record<
 const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [copied, setCopied] = useState(false);
-  const [showClaimModal, setShowClaimModal] = useState(false);
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showPresaleWidget, setShowPresaleWidget] = useState(false);
   const [purchaseAmount, setPurchaseAmount] = useState(100);
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [claimSuccess, setClaimSuccess] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinStep, setJoinStep] = useState<"details" | "confirm" | "joined">(
@@ -566,13 +563,6 @@ const UserDashboard = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleClaimRewards = () => {
-    setIsClaiming(true);
-    setTimeout(() => {
-      setIsClaiming(false);
-      setClaimSuccess(true);
-    }, 2000);
-  };
 
   const referralHistory = [
     {
@@ -868,28 +858,22 @@ const UserDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => setShowClaimModal(true)}
-                className="mlc-card-elevated flex items-center gap-4 text-left hover:border-success/30 transition-colors relative overflow-hidden group"
+                onClick={() => setActiveTab("rewards")}
+                className="mlc-card-elevated flex items-center gap-4 text-left hover:border-muted/30 transition-colors relative overflow-hidden group"
               >
-                {stats.pendingRewards > 0 && (
-                  <motion.div
-                    className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-success text-success-foreground text-xs font-bold"
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    Claim Now!
-                  </motion.div>
-                )}
+                <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-secondary text-muted-foreground text-xs font-medium">
+                  Coming Soon
+                </div>
                 <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
                   <Gift className="w-6 h-6 text-success" />
                 </div>
                 <div className="flex-1">
                   <p className="font-semibold text-foreground">Claim Rewards</p>
                   <p className="text-sm text-muted-foreground">
-                    {stats.pendingRewards} points pending
+                    Rewards launching soon
                   </p>
                 </div>
-                <Sparkles className="w-5 h-5 text-success opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </motion.button>
 
               <motion.div
@@ -1309,186 +1293,68 @@ const UserDashboard = () => {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
+            className="relative min-h-[400px]"
           >
-            {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="mlc-card">
-                <p className="text-sm text-muted-foreground">Total Points</p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {stats.totalPoints.toLocaleString()}
-                </p>
-              </div>
-              <div className="mlc-card">
-                <p className="text-sm text-muted-foreground">Pending Rewards</p>
-                <p className="text-2xl font-bold text-success mt-1">
-                  {stats.pendingRewards}
-                </p>
-              </div>
-              <div className="mlc-card">
-                <p className="text-sm text-muted-foreground">Total Referrals</p>
-                <p className="text-2xl font-bold text-foreground mt-1">
-                  {stats.referrals}
-                </p>
-              </div>
-              <div className="mlc-card">
-                <p className="text-sm text-muted-foreground">
-                  Referral Earnings
-                </p>
-                <p className="text-2xl font-bold text-primary mt-1">125 MLC</p>
-              </div>
-            </div>
-
-            {/* Referral Link */}
-            <div className="mlc-card-elevated">
-              <h3 className="text-lg font-semibold text-foreground mb-4">
-                Your Referral Link
-              </h3>
-              <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  value={referralLink}
-                  readOnly
-                  className="flex-1 mlc-input"
-                />
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleCopy}
-                  className={`px-6 py-3 rounded-xl font-medium transition-colors ${
-                    copied
-                      ? "bg-success text-success-foreground"
-                      : "bg-primary text-primary-foreground"
-                  }`}
-                >
-                  {copied ? (
-                    <CheckCircle className="w-5 h-5" />
-                  ) : (
-                    <Copy className="w-5 h-5" />
-                  )}
-                </motion.button>
-              </div>
-              <div className="grid grid-cols-3 gap-4 mt-4">
-                <div className="p-3 rounded-xl bg-secondary text-center">
-                  <p className="text-sm text-muted-foreground">Signup Bonus</p>
-                  <p className="text-lg font-bold text-primary">+50 Points</p>
-                </div>
-                <div className="p-3 rounded-xl bg-secondary text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Purchase Bonus
-                  </p>
-                  <p className="text-lg font-bold text-success">+5% MLC</p>
-                </div>
-                <div className="p-3 rounded-xl bg-secondary text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Simulation Bonus
-                  </p>
-                  <p className="text-lg font-bold text-warning">+25 Points</p>
-                </div>
-              </div>
-
-              {/* Referral Tiers */}
-              <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-primary/5 to-success/5 border border-primary/20">
-                <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Award className="w-4 h-4 text-primary" />
-                  Referral Reward Tiers
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">
-                      🥉 1-5 Referrals
-                    </span>
-                    <span className="font-medium text-foreground">
-                      5% bonus on their purchases
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">
-                      🥈 6-15 Referrals
-                    </span>
-                    <span className="font-medium text-foreground">
-                      7% bonus + 100 bonus points
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-muted-foreground">
-                      🥇 16-50 Referrals
-                    </span>
-                    <span className="font-medium text-foreground">
-                      10% bonus + 500 bonus points
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span className="text-muted-foreground">
-                      💎 50+ Referrals
-                    </span>
-                    <span className="font-medium text-success">
-                      15% bonus + VIP Status
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-3">
-                  Earn a percentage of MLC for every purchase your referrals
-                  make, plus bonus points for each signup!
-                </p>
-              </div>
-            </div>
-
-            {/* Claim Rewards */}
-            <div className="mlc-card-elevated bg-gradient-to-r from-success/10 to-primary/10 border-success/30">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">
-                    Pending Rewards
-                  </h3>
-                  <p className="text-3xl font-bold text-success mt-2">
-                    {stats.pendingRewards} Points
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Available to claim
-                  </p>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowClaimModal(true)}
-                  className="mlc-btn-primary"
-                >
-                  Claim Rewards
-                </motion.button>
-              </div>
-            </div>
-
-            {/* Referral History */}
-            <div className="mlc-card-elevated">
-              <h3 className="text-lg font-semibold text-foreground mb-4">
-                Referral History
-              </h3>
-              <div className="space-y-0">
-                {referralHistory.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between py-4 border-b border-border last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                        <User className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {item.user}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.action} • {item.date}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold text-success">
-                      {item.reward}
-                    </span>
+            {/* Background content — blurred by overlay */}
+            <div className="space-y-6 pointer-events-none select-none">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {["Total Points", "Pending Rewards", "Total Referrals", "Referral Earnings"].map((label) => (
+                  <div key={label} className="mlc-card">
+                    <p className="text-sm text-muted-foreground">{label}</p>
+                    <p className="text-2xl font-bold text-foreground mt-1">—</p>
                   </div>
                 ))}
               </div>
+              <div className="mlc-card-elevated h-48" />
+              <div className="mlc-card-elevated h-32" />
+            </div>
+
+            {/* Coming Soon overlay */}
+            <div className="pointer-events-auto absolute inset-0 z-10 rounded-3xl backdrop-blur-3xl border border-white/10 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] flex flex-col items-center justify-center gap-6 p-8">
+              <div className="text-center">
+                <p className="text-2xl md:text-3xl font-semibold text-foreground">
+                  Coming Soon
+                </p>
+                <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-md mx-auto">
+                  Rewards and referral tracking are launching soon — your referral link is ready to share now.
+                </p>
+              </div>
+
+              {/* Referral link — live data from backend */}
+              {referralLink && (
+                <div className="w-full max-w-md bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-5">
+                  <p className="text-sm font-semibold text-foreground mb-3">
+                    Your Referral Link
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={referralLink}
+                      readOnly
+                      className="flex-1 mlc-input text-xs"
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleCopy}
+                      className={`px-4 py-3 rounded-xl font-medium transition-colors flex-shrink-0 ${
+                        copied
+                          ? "bg-success text-success-foreground"
+                          : "bg-primary text-primary-foreground"
+                      }`}
+                    >
+                      {copied ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </motion.button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Referral code: <span className="font-mono font-medium text-foreground">{referralCode}</span>
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -1718,145 +1584,6 @@ const UserDashboard = () => {
       </div>
 
       {/* Claim Rewards Modal */}
-      {showClaimModal && (
-        <>
-          <div
-            onClick={() => {
-              if (!isClaiming) {
-                setShowClaimModal(false);
-                setClaimSuccess(false);
-              }
-            }}
-            className="fixed inset-0 bg-foreground/20 z-50"
-          />
-
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="mlc-card-elevated w-full max-w-md">
-              {!claimSuccess ? (
-                <>
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                        <Gift className="w-6 h-6 text-success" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-semibold text-foreground">
-                          Claim Rewards
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                          Convert points to MLC
-                        </p>
-                      </div>
-                    </div>
-                    {!isClaiming && (
-                      <button
-                        onClick={() => setShowClaimModal(false)}
-                        className="w-8 h-8 rounded-lg hover:bg-secondary flex items-center justify-center"
-                      >
-                        <X className="w-5 h-5 text-muted-foreground" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-xl bg-gradient-to-r from-success/10 to-primary/10 border border-success/20">
-                      <p className="text-sm text-muted-foreground">
-                        Available to Claim
-                      </p>
-                      <p className="text-3xl font-bold text-success mt-1">
-                        {stats.pendingRewards} Points
-                      </p>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-secondary/50">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-muted-foreground">
-                          Points to Claim
-                        </span>
-                        <span className="font-semibold text-foreground">
-                          {stats.pendingRewards}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-muted-foreground">
-                          Conversion Rate
-                        </span>
-                        <span className="font-semibold text-foreground">
-                          100 Points = 1 MLC
-                        </span>
-                      </div>
-                      <div className="border-t border-border pt-2 mt-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-foreground">
-                            You'll Receive
-                          </span>
-                          <span className="text-lg font-bold text-primary">
-                            {(stats.pendingRewards / 100).toFixed(1)} MLC
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded-xl bg-warning/10 border border-warning/20">
-                      <p className="text-xs text-warning flex items-start gap-2">
-                        <Clock className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        Claimed MLC will be added to your locked balance and
-                        released after the presale ends.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleClaimRewards}
-                    disabled={isClaiming}
-                    className="w-full mlc-btn-primary mt-6 flex items-center justify-center gap-2"
-                  >
-                    {isClaiming ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-5 h-5" />
-                        Claim {stats.pendingRewards} Points
-                      </>
-                    )}
-                  </button>
-                </>
-              ) : (
-                <div className="py-8 text-center">
-                  <div className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="w-10 h-10 text-success" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-foreground">
-                    Rewards Claimed!
-                  </h2>
-                  <p className="text-muted-foreground mt-2">
-                    You've received{" "}
-                    <span className="font-bold text-primary">
-                      {(stats.pendingRewards / 100).toFixed(1)} MLC
-                    </span>
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Added to your locked balance
-                  </p>
-
-                  <button
-                    onClick={() => {
-                      setShowClaimModal(false);
-                      setClaimSuccess(false);
-                    }}
-                    className="mlc-btn-primary mt-6"
-                  >
-                    Done
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
 
       {/* PaymentModal for Buy More MLC */}
       <PaymentModal

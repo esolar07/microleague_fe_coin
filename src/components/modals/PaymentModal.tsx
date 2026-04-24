@@ -401,11 +401,11 @@ const PaymentModal = ({
   ]);
 
   const handleCoinbaseOnramp = useCallback(async () => {
-    if (!address) return;
+    if (!walletAddress) return;
     setOnrampError(null);
     try {
       const url = await fetchOnrampUrl({
-        destinationAddress: address,
+        destinationAddress: walletAddress,
         presetFiatAmount: shortfall,
         redirectUrl: window.location.href,
       });
@@ -421,7 +421,7 @@ const PaymentModal = ({
         err instanceof Error ? err.message : "Failed to open Coinbase Onramp.",
       );
     }
-  }, [address, shortfall]);
+  }, [walletAddress, shortfall]);
 
   const handleRefreshBalance = useCallback(async () => {
     const result = await refetchUsdcBalance();
