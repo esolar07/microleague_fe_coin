@@ -7,7 +7,9 @@ import AuthModal from "@/components/modals/AuthModal";
 import { useAuth } from "@/hooks/use-auth";
 import { useDisconnect } from "wagmi";
 import { useSignOut } from "@coinbase/cdp-hooks";
+import { useQueryClient } from "@tanstack/react-query";
 import { smartRedirect } from "@/utils/ssoRedirect";
+import { performCompleteLogout } from "@/utils/logout";
 import logo from "@/assets/logo.webp";
 
 const Header = () => {
@@ -17,6 +19,7 @@ const Header = () => {
   const { isAuthenticated, token, logout } = useAuth();
   const { disconnect } = useDisconnect();
   const { signOut } = useSignOut();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const navLinks = [
@@ -48,12 +51,26 @@ const Header = () => {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
+      // Sign out from Coinbase CDP session
       await signOut();
-    } catch {
-      // session may already be expired
+    } catch (err: unknown) {
+      // Session may already be expired (401) - that's fine
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("401") && !msg.includes("Unauthorized")) {
+        console.error("signOut error:", err);
+      }
     }
-    logout();
+
+    // Disconnect wallet
     disconnect();
+
+    // Clear auth state
+    logout();
+
+    // Perform comprehensive cleanup
+    await performCompleteLogout(queryClient);
+
+    // Navigate to home
     navigate("/");
     setLoggingOut(false);
   };

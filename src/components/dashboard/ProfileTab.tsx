@@ -16,6 +16,7 @@ import {
 import { useAccount } from "wagmi";
 import { useAuth } from "@/hooks/use-auth";
 import { useDisconnect } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useSignOut,
   useEvmAccounts,
@@ -25,6 +26,7 @@ import { ExportWallet } from "@coinbase/cdp-react/components/ExportWallet";
 import { useNavigate } from "react-router-dom";
 import { uploadAvatar } from "@/services/userProfile";
 import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
+import { performCompleteLogout } from "@/utils/logout";
 import UserAvatar from "@/components/ui/UserAvatar";
 
 const ProfileTab = () => {
@@ -34,6 +36,7 @@ const ProfileTab = () => {
   const { evmAccounts } = useEvmAccounts();
   const { disconnect } = useDisconnect();
   const { signOut } = useSignOut();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -124,13 +127,28 @@ const ProfileTab = () => {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
+      // Sign out from Coinbase CDP session
       await signOut();
-    } catch {
-      // silent — session may already be expired
+    } catch (err: unknown) {
+      // Session may already be expired (401) - that's fine
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("401") && !msg.includes("Unauthorized")) {
+        console.error("signOut error:", err);
+      }
     }
-    logout();
+
+    // Disconnect wallet
     disconnect();
+
+    // Clear auth state
+    logout();
+
+    // Perform comprehensive cleanup
+    await performCompleteLogout(queryClient);
+
+    // Navigate to home
     navigate("/");
+    setLoggingOut(false);
   };
 
   const truncatedWallet = walletAddress

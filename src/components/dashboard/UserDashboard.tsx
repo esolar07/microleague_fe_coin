@@ -62,6 +62,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { redirectWithSso } from "@/services/sso";
 import { SSO_URLS } from "@/config/sso";
+import { performCompleteLogout } from "@/utils/logout";
 
 const tabs: {
   id: string;
@@ -237,8 +238,15 @@ const UserDashboard = () => {
     },
   });
 
-  // Shared query config for presale contract reads — avoids hammering RPC on every render
-  const contractQueryConfig = { staleTime: 30_000, refetchInterval: 60_000 };
+  // Shared query config for presale contract reads — no staleTime to ensure fresh fetches
+  // staleTime: 0 means data is ALWAYS considered stale, so refetch will always fetch fresh data
+  // refetchInterval: 60s as fallback to keep data fresh even without user action
+  // gcTime: 5m to cache successfully fetched data for offline use
+  const contractQueryConfig = {
+    staleTime: 0,
+    refetchInterval: 60_000,
+    gcTime: 300_000,
+  };
 
   // Get current presale stage
   const { data: currentStage } = useReadContract({
@@ -537,9 +545,17 @@ const UserDashboard = () => {
           console.error("signOut error:", err);
         }
       }
-      // Always clear local state regardless of CDP API result
-      if (isAuthenticated) logout();
+
+      // Disconnect wallet
       if (isConnected) disconnect();
+
+      // Clear auth state
+      if (isAuthenticated) logout();
+
+      // Perform comprehensive cleanup
+      await performCompleteLogout(queryClient);
+
+      // Navigate to home
       navigate("/");
     } else {
       openConnectModal?.();
@@ -562,7 +578,6 @@ const UserDashboard = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
 
   const referralHistory = [
     {
@@ -1298,7 +1313,12 @@ const UserDashboard = () => {
             {/* Background content — blurred by overlay */}
             <div className="space-y-6 pointer-events-none select-none">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {["Total Points", "Pending Rewards", "Total Referrals", "Referral Earnings"].map((label) => (
+                {[
+                  "Total Points",
+                  "Pending Rewards",
+                  "Total Referrals",
+                  "Referral Earnings",
+                ].map((label) => (
                   <div key={label} className="mlc-card">
                     <p className="text-sm text-muted-foreground">{label}</p>
                     <p className="text-2xl font-bold text-foreground mt-1">—</p>
@@ -1316,7 +1336,8 @@ const UserDashboard = () => {
                   Coming Soon
                 </p>
                 <p className="mt-3 text-base md:text-lg text-muted-foreground max-w-md mx-auto">
-                  Rewards and referral tracking are launching soon — your referral link is ready to share now.
+                  Rewards and referral tracking are launching soon — your
+                  referral link is ready to share now.
                 </p>
               </div>
 
@@ -1351,7 +1372,10 @@ const UserDashboard = () => {
                     </motion.button>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Referral code: <span className="font-mono font-medium text-foreground">{referralCode}</span>
+                    Referral code:{" "}
+                    <span className="font-mono font-medium text-foreground">
+                      {referralCode}
+                    </span>
                   </p>
                 </div>
               )}
@@ -1594,8 +1618,20 @@ const UserDashboard = () => {
         mlcAmount={purchaseAmount / 0.001}
         onTransactionSuccess={async () => {
           await refetchBankTransfers();
-          // Invalidate all presale contract reads so Total MLC and balances refresh
-          await queryClient.invalidateQueries({ queryKey: ["readContract"] });
+          // Clear all contract query cache to force fresh data fetch
+          await queryClient.invalidateQueries({
+            queryKey: ["readContract"],
+          });
+          // Refetch all presale contract reads after purchase
+          await queryClient.refetchQueries({
+            queryKey: ["readContract"],
+            type: "all",
+          });
+          // Refetch activity to show the new buy transaction
+          await queryClient.refetchQueries({
+            queryKey: ["activity"],
+            type: "all",
+          });
         }}
       />
       {/* Join League Modal */}
@@ -1932,8 +1968,20 @@ const UserDashboard = () => {
         mlcAmount={purchaseAmount / 0.001}
         onTransactionSuccess={async () => {
           await refetchBankTransfers();
-          // Invalidate all presale contract reads so Total MLC and balances refresh
-          await queryClient.invalidateQueries({ queryKey: ["readContract"] });
+          // Clear all contract query cache to force fresh data fetch
+          await queryClient.invalidateQueries({
+            queryKey: ["readContract"],
+          });
+          // Refetch all presale contract reads after purchase
+          await queryClient.refetchQueries({
+            queryKey: ["readContract"],
+            type: "all",
+          });
+          // Refetch activity to show the new buy transaction
+          await queryClient.refetchQueries({
+            queryKey: ["activity"],
+            type: "all",
+          });
         }}
       />
 
