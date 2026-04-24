@@ -29,10 +29,13 @@ import {
   useAccount,
   useBalance,
   useChainId,
+  useConnect,
+  useConnectors,
   useDisconnect,
   useReadContract,
   useSwitchChain,
 } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { formatUnits } from "viem";
 import logo from "@/assets/logo.webp";
@@ -43,6 +46,7 @@ import MyTokensTab from "./MyTokensTab";
 import VestingTab from "./VestingTab";
 import ProfileTab from "./ProfileTab";
 import PaymentModal from "@/components/modals/PaymentModal";
+import WalletModal from "@/components/modals/WalletModal";
 import PresaleWidget from "@/components/presale/PresaleWidget";
 import { useBankTransfers } from "@/hooks/use-bank-transfers";
 import type { BankTransferRecord } from "@/services/bankTransfer";
@@ -143,13 +147,36 @@ const UserDashboard = () => {
 
   // Wallet connection and auth
   const { address, isConnected } = useAccount();
+  const queryClient = useQueryClient();
   const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
+  const { connect } = useConnect();
+  const connectors = useConnectors();
   const { isAuthenticated, logout, user, token } = useAuth();
   const { signOut } = useSignOut();
   const navigate = useNavigate();
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
+
+  const [showWalletModal, setShowWalletModal] = useState(false);
+
+  const handleWalletSelect = (method: "coinbase" | "rainbowkit") => {
+    if (method === "coinbase") {
+      const cbConnector = connectors.find(
+        (c) =>
+          c.id === "com.coinbase.wallet" ||
+          (c.name?.toLowerCase().includes("coinbase") &&
+            !c.id.toLowerCase().includes("cdp")),
+      );
+      if (cbConnector) {
+        connect({ connector: cbConnector });
+      } else {
+        openConnectModal?.();
+      }
+    } else {
+      openConnectModal?.();
+    }
+  };
   // SSO-enabled redirects to simulation frontend
   const openSimulationModal = async () => {
     const targetUrl = SSO_URLS.simulation.simulate;
@@ -682,7 +709,7 @@ const UserDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => openConnectModal?.()}
+                onClick={() => setShowWalletModal(true)}
                 className="mlc-btn-secondary text-sm px-4 py-2"
               >
                 Connect Wallet
@@ -1840,6 +1867,8 @@ const UserDashboard = () => {
         mlcAmount={purchaseAmount / 0.001}
         onTransactionSuccess={async () => {
           await refetchBankTransfers();
+          // Invalidate all presale contract reads so Total MLC and balances refresh
+          await queryClient.invalidateQueries({ queryKey: ["readContract"] });
         }}
       />
       {/* Join League Modal */}
@@ -2176,7 +2205,17 @@ const UserDashboard = () => {
         mlcAmount={purchaseAmount / 0.001}
         onTransactionSuccess={async () => {
           await refetchBankTransfers();
+          // Invalidate all presale contract reads so Total MLC and balances refresh
+          await queryClient.invalidateQueries({ queryKey: ["readContract"] });
         }}
+      />
+
+      {/* Wallet selection modal */}
+      <WalletModal
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        onSelectWallet={handleWalletSelect}
+        onEmailAlreadySignedIn={() => setShowWalletModal(false)}
       />
 
       {/* SSO Redirect Loading Overlay */}

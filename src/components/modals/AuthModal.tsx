@@ -14,7 +14,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { useAccount, useChainId, useSignMessage, useSwitchChain } from "wagmi";
+import { useAccount, useChainId, useConnect, useSignMessage, useSwitchChain } from "wagmi";
+import { connector as cdpConnector } from "@/providers/CoinbaseProvider";
 import { type BackendWalletTypeName } from "@/lib/backend-auth";
 import { useAuth } from "@/hooks/use-auth";
 import { authenticateWallet } from "@/services/auth";
@@ -53,9 +54,10 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const { login, isAuthenticated, setManualSignInProgress } = useAuth();
+  const { login, isAuthenticated, setManualSignInProgress, user } = useAuth();
   const { openConnectModal } = useConnectModal();
   const { address, isConnected, connector } = useAccount();
+  const { connect } = useConnect();
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
@@ -80,7 +82,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [setupErrorMsg, setSetupErrorMsg] = useState("");
   const { currentUser } = useCurrentUser();
 
-  const walletAddress = address ?? "";
+  const walletAddress = address ?? user?.walletAddress ?? "";
   const { data: profileData, isLoading: profileLoading, isError: profileError } = useUserProfile(isAuthenticated ? walletAddress || undefined : undefined);
   const updateProfileMutation = useUpdateUserProfile(walletAddress);
 
@@ -192,6 +194,16 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       });
 
       login({ token: result.token, user: result.user });
+
+      // Bridge the CDP session into wagmi so writeContract works.
+      // Errors are swallowed — the CDP session is already valid even if wagmi
+      // reports the connector as already connected.
+      try {
+        await connect({ connector: cdpConnector });
+      } catch {
+        // ignore
+      }
+
       // Pre-fill email from Coinbase if available
       const cbEmail = currentUser?.authenticationMethods?.email?.email ?? "";
       if (cbEmail) setSetupEmail(cbEmail);

@@ -109,6 +109,10 @@ const PaymentModal = ({
   const { user } = useAuth();
   const walletAddress =
     address ?? (user?.walletAddress as `0x${string}` | undefined);
+  // CDP email/SMS users don't connect via wagmi — treat them as connected
+  // if they have an authenticated session with a wallet address.
+  const isCoinbaseSession = user?.walletType === "coinbase";
+  const isEffectivelyConnected = isConnected || (isCoinbaseSession && Boolean(walletAddress));
   const queryClient = useQueryClient();
   const chainId = useChainId();
   const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
@@ -163,19 +167,19 @@ const PaymentModal = ({
   );
 
   const { data: usdcBalance, refetch: refetchUsdcBalance } = useBalance({
-    address,
+    address: walletAddress,
     token: USDC_ADDRESS,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && USDC_ADDRESS) },
+    query: { enabled: Boolean(walletAddress && USDC_ADDRESS) },
   });
 
   const { data: allowance, refetch: refetchAllowance } = useReadContract({
     abi: erc20Abi,
     address: USDC_ADDRESS,
     functionName: "allowance",
-    args: address && PRESALE_ADDRESS ? [address, PRESALE_ADDRESS] : undefined,
+    args: walletAddress && PRESALE_ADDRESS ? [walletAddress, PRESALE_ADDRESS] : undefined,
     chainId: APP_CHAIN.id,
-    query: { enabled: Boolean(address && PRESALE_ADDRESS && USDC_ADDRESS) },
+    query: { enabled: Boolean(walletAddress && PRESALE_ADDRESS && USDC_ADDRESS) },
   });
 
   const { data: currentStage } = useReadContract({
@@ -268,7 +272,9 @@ const PaymentModal = ({
   );
 
   const ensureCorrectChain = useCallback(async () => {
-    if (!isConnected) throw new Error("Wallet not connected");
+    if (!isEffectivelyConnected) throw new Error("Wallet not connected");
+    // CDP smart wallet sessions don't need manual chain switching
+    if (isCoinbaseSession) return;
 
     let currentChainId = chainId;
     try {
@@ -295,10 +301,10 @@ const PaymentModal = ({
         );
       }
     }
-  }, [chainId, isConnected, switchChainAsync]);
+  }, [chainId, isCoinbaseSession, isEffectivelyConnected, switchChainAsync]);
 
   const handleAutoApproveAndBuy = useCallback(async () => {
-    if (!PRESALE_ADDRESS || !USDC_ADDRESS || !isConnected) return;
+    if (!PRESALE_ADDRESS || !USDC_ADDRESS || !isEffectivelyConnected) return;
 
     if (insufficientFunds) {
       setStep("topup");
@@ -391,7 +397,7 @@ const PaymentModal = ({
     onTransactionSuccess,
     refetchAllowance,
     requiredUsdc,
-    isConnected,
+    isEffectivelyConnected,
   ]);
 
   const handleCoinbaseOnramp = useCallback(async () => {
@@ -448,7 +454,8 @@ const PaymentModal = ({
     }
 
     if (step !== "crypto") return;
-    if (!isConnected) return;
+    if (!isEffectivelyConnected) return;
+    if (isCoinbaseSession) return;
     if (isOnCorrectChain) return;
     if (autoSwitchAttempted) return;
     if (isSwitchingChain) return;
@@ -461,7 +468,8 @@ const PaymentModal = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     autoSwitchAttempted,
-    isConnected,
+    isCoinbaseSession,
+    isEffectivelyConnected,
     isOpen,
     isSwitchingChain,
     step,
@@ -537,13 +545,13 @@ const PaymentModal = ({
   };
 
   const handleSuccessClose = async () => {
-    if (txHash) {
-      try {
-        await SAFTService.downloadCertificate(txHash);
-      } catch (error) {
-        console.error("Error downloading SAFT certificate:", error);
-      }
-    }
+    // if (txHash) {
+    //   try {
+    //     await SAFTService.downloadCertificate(txHash);
+    //   } catch (error) {
+    //     console.error("Error downloading SAFT certificate:", error);
+    //   }
+    // }
     setStep("select");
     setReceiptUploaded(false);
     setEmailSent(false);
@@ -787,14 +795,14 @@ const PaymentModal = ({
                     </div>
                   )}
 
-                  {!isConnected ? (
+                  {!isEffectivelyConnected ? (
                     <button
                       onClick={() => openConnectModal?.()}
                       className="w-full mlc-btn-primary"
                     >
                       Connect wallet
                     </button>
-                  ) : !isOnCorrectChain ? (
+                  ) : !isOnCorrectChain && !isCoinbaseSession ? (
                     <div className="space-y-3">
                       <div className="p-4 rounded-xl bg-warning/10 border border-warning/20 flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
@@ -959,7 +967,7 @@ const PaymentModal = ({
                   <div className="space-y-3">
                     <button
                       onClick={handleCoinbaseOnramp}
-                      disabled={!COINBASE_PROJECT_ID || !address}
+                      disabled={!COINBASE_PROJECT_ID || !walletAddress}
                       className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="flex items-center gap-3">

@@ -1,45 +1,42 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Wallet, Mail, ExternalLink, Shield } from "lucide-react";
+import { X, Wallet, Mail, Shield } from "lucide-react";
+import { SignInModal } from "@coinbase/cdp-react/components/SignInModal";
+import { useIsSignedIn, useEvmAccounts } from "@coinbase/cdp-hooks";
 
 interface WalletModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectWallet: (method: string) => void;
+  onSelectWallet: (method: "coinbase" | "rainbowkit") => void;
+  onEmailAlreadySignedIn?: (address: string) => void;
 }
 
-const walletOptions = [
-  {
-    id: "coinbase",
-    name: "Coinbase Wallet",
-    description: "Connect with Coinbase Wallet",
-    icon: "🔵",
-    popular: true,
-  },
-  {
-    id: "walletconnect",
-    name: "WalletConnect",
-    description: "Scan with your mobile wallet",
-    icon: "🔗",
-    popular: true,
-  },
-  {
-    id: "metamask",
-    name: "MetaMask",
-    description: "Connect with browser extension",
-    icon: "🦊",
-    popular: true,
-  },
-  {
-    id: "email",
-    name: "Email Smart Wallet",
-    description: "Sign in with email via Coinbase",
-    icon: "✉️",
-    popular: true,
-    recommended: true,
-  },
-];
+const WalletModal = ({
+  isOpen,
+  onClose,
+  onSelectWallet,
+  onEmailAlreadySignedIn,
+}: WalletModalProps) => {
+  const { isSignedIn } = useIsSignedIn();
+  const { evmAccounts } = useEvmAccounts();
+  const coinbaseEvmAddress = evmAccounts?.[0]?.address ?? null;
 
-const WalletModal = ({ isOpen, onClose, onSelectWallet }: WalletModalProps) => {
+  const emailButtonContent = (
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl mlc-gradient-bg flex items-center justify-center">
+        <Mail className="w-5 h-5 text-primary-foreground" />
+      </div>
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-foreground">Email</span>
+          <span className="mlc-badge-primary text-[10px]">Recommended</span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Sign in with email via Coinbase
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -61,7 +58,7 @@ const WalletModal = ({ isOpen, onClose, onSelectWallet }: WalletModalProps) => {
             transition={{ duration: 0.2 }}
             className="fixed inset-0 flex items-center justify-center z-50 p-4"
           >
-            <div className="mlc-card-elevated w-full max-w-md max-h-[90vh] overflow-y-auto bd">
+            <div className="mlc-card-elevated w-full max-w-md bd">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
@@ -87,46 +84,76 @@ const WalletModal = ({ isOpen, onClose, onSelectWallet }: WalletModalProps) => {
 
               {/* Wallet Options */}
               <div className="space-y-3">
-                {walletOptions.map((option) => (
+                {/* Email via Coinbase CDP */}
+                {isSignedIn && coinbaseEvmAddress ? (
                   <motion.button
-                    key={option.id}
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
-                    onClick={() => onSelectWallet(option.id)}
-                    className={`w-full p-4 rounded-xl border transition-all duration-200 text-left ${
-                      option.recommended
-                        ? "border-primary bg-primary/5 hover:bg-primary/10"
-                        : "border-border bg-card hover:bg-secondary/50"
-                    }`}
+                    onClick={() => {
+                      onEmailAlreadySignedIn?.(coinbaseEvmAddress);
+                      onClose();
+                    }}
+                    className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{option.icon}</span>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-foreground">
-                              {option.name}
-                            </span>
-                            {option.recommended && (
-                              <span className="mlc-badge-primary text-[10px]">
-                                Recommended
-                              </span>
-                            )}
-                            {option.popular && !option.recommended && (
-                              <span className="mlc-badge text-[10px]">
-                                Popular
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {option.description}
-                          </p>
-                        </div>
-                      </div>
-                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
-                    </div>
+                    {emailButtonContent}
                   </motion.button>
-                ))}
+                ) : (
+                  <SignInModal>
+                    <motion.button
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      className="w-full p-4 rounded-xl border border-primary bg-primary/5 hover:bg-primary/10 transition-all text-left"
+                    >
+                      {emailButtonContent}
+                    </motion.button>
+                  </SignInModal>
+                )}
+
+                {/* Coinbase Wallet */}
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => {
+                    onSelectWallet("coinbase");
+                    onClose();
+                  }}
+                  className="w-full p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🔵</span>
+                    <div>
+                      <span className="font-medium text-foreground">
+                        Coinbase Wallet
+                      </span>
+                      <p className="text-sm text-muted-foreground">
+                        Connect with Coinbase Wallet app
+                      </p>
+                    </div>
+                  </div>
+                </motion.button>
+
+                {/* Other Wallets via RainbowKit */}
+                <motion.button
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => {
+                    onSelectWallet("rainbowkit");
+                    onClose();
+                  }}
+                  className="w-full p-4 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🌈</span>
+                    <div>
+                      <span className="font-medium text-foreground">
+                        Other Wallets
+                      </span>
+                      <p className="text-sm text-muted-foreground">
+                        MetaMask, WalletConnect & more
+                      </p>
+                    </div>
+                  </div>
+                </motion.button>
               </div>
 
               {/* Security Notice */}

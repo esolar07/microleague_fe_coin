@@ -205,7 +205,7 @@ export default function MyTokensTab({
                         <td className="py-3 pr-4 text-muted-foreground">
                           {new Date(tx.timestamp * 1000).toLocaleDateString()}
                         </td>
-                        <td className="py-3 pr-4 text-foreground">{tx.stage}</td>
+                        <td className="py-3 pr-4 text-foreground">{tx.stage+1}</td>
                         <td className="py-3 pr-4 text-foreground">
                           {tx.tokens.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                         </td>
