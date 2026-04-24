@@ -17,7 +17,7 @@ export function useAutoAuth() {
   const chainId = useChainId();
   const { signMessageAsync } = useSignMessage();
   const { switchChainAsync } = useSwitchChain();
-  const { isAuthenticated, login, manualSignInProgress } = useAuth();
+  const { isAuthenticated, user, login, logout, manualSignInProgress } = useAuth();
 
   const attempted = useRef(false);
   const inProgress = useRef(false);
@@ -25,6 +25,13 @@ export function useAutoAuth() {
   useEffect(() => {
     if (isReconnecting) return;
     if (!isConnected || !address) return;
+    // CDP embedded wallet users authenticate via AuthModal → handleCoinbaseAuth.
+    // If a prior auto-auth run created a wrong "smart" session for this connector,
+    // clear it so the user can re-authenticate properly via the modal.
+    if (connector?.id === "cdp-embedded-wallet") {
+      if (isAuthenticated && user?.walletType === "smart") logout();
+      return;
+    }
     if (isAuthenticated) return;
     if (inProgress.current) return;
     if (manualSignInProgress) return;

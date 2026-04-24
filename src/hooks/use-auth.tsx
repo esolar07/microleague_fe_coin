@@ -104,6 +104,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // managed by the CDP SDK, so we must not require wagmi isConnected for them.
   const isCoinbaseSession = auth?.user?.walletType === "coinbase";
 
+  // Ref that is always current — immune to stale closures in effects triggered
+  // by wagmi's synchronous useSyncExternalStore re-renders that can fire before
+  // React commits a batch containing the login() setAuth() call.
+  const isCoinbaseSessionRef = useRef(isCoinbaseSession);
+  isCoinbaseSessionRef.current = isCoinbaseSession;
+
   // On mount: if there's a stored session but no wallet connected (and wagmi
   // isn't still reconnecting), try to refresh the token for RainbowKit wallets,
   // or clear the session if refresh fails.
@@ -140,18 +146,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [isReconnecting]);
 
   // Auto-logout when wallet disconnects mid-session.
-  // Skip for Coinbase CDP sessions — they don't use wagmi.
+  // Reads isCoinbaseSessionRef (always current) instead of the closure value,
+  // so a wagmi synchronous re-render racing with login()'s async batch
+  // can never see a stale isCoinbaseSession = false and trigger a spurious logout.
+  // Also skips logout while manualSignInProgress is true: the CDP SDK emits
+  // transient disconnect events during session setup (refreshAccessToken → signOut),
+  // which would fire before login() is committed and cause a spurious logout.
   useEffect(() => {
-    if (isCoinbaseSession) return;
-    if (wasConnected.current && !isConnected) {
+    if (isCoinbaseSessionRef.current) return;
+    if (!manualSignInProgress && wasConnected.current && !isConnected) {
       logout();
     }
     wasConnected.current = isConnected;
-  }, [isConnected, isCoinbaseSession, logout]);
+  }, [isConnected, logout, manualSignInProgress]);
 
-  // Auto-logout when CDP returns 401 — stale/expired session detected on init
+  // Auto-logout on stale/expired backend JWT (401).
+  // Never fires for Coinbase sessions — CDP regularly emits internal 401s
+  // (token refresh, sign-in setup) that must not be mistaken for backend 401s.
   useEffect(() => {
     const handler = (event: PromiseRejectionEvent) => {
+      if (manualSignInProgress) return;
+      if (isCoinbaseSession) return;
       const msg =
         event.reason instanceof Error
           ? event.reason.message
@@ -163,7 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     window.addEventListener("unhandledrejection", handler);
     return () => window.removeEventListener("unhandledrejection", handler);
-  }, [auth, logout]);
+  }, [auth, isCoinbaseSession, logout, manualSignInProgress]);
 
   const token = auth?.token ?? null;
   const user = auth?.user ?? null;
