@@ -6,8 +6,7 @@ import {
 } from "@rainbow-me/rainbowkit/wallets";
 import { createConfig, http } from "wagmi";
 import { connector as cdpConnector } from "@/providers/CoinbaseProvider";
-import { APP_CHAIN } from "@/config/network";
-import { baseSepolia, sepolia } from "viem/chains";
+import { base, baseSepolia } from "viem/chains";
 
 const walletConnectProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as
   | string
@@ -37,9 +36,9 @@ export const wagmiConfig = createConfig({
   // cdpConnector MUST be here — it bridges the CDP email/SMS session into wagmi
   // so useAccount / useSignMessage work after the user signs in via SignInModal.
   connectors: [...rbkConnectors, cdpConnector],
-  chains: [baseSepolia],
+  chains: [baseSepolia, base],
   transports: {
-    // [sepolia.id]: http(),
+    [base.id]: http(),
     [baseSepolia.id]: http(),
   },
 });
