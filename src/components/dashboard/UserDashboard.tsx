@@ -180,13 +180,14 @@ const UserDashboard = () => {
     const targetUrl = SSO_URLS.simulation.simulate;
 
     if (isAuthenticated && token) {
-      // User is authenticated - use SSO
       setIsSsoRedirecting(true);
-      await redirectWithSso(targetUrl, token);
-      // Note: setIsSsoRedirecting(false) not needed as page will redirect
+      try {
+        await redirectWithSso(targetUrl, token);
+      } finally {
+        setIsSsoRedirecting(false);
+      }
     } else {
-      // User not authenticated - direct redirect
-      window.location.href = targetUrl;
+      window.open(targetUrl, "_blank");
     }
   };
 
@@ -194,13 +195,14 @@ const UserDashboard = () => {
     const targetUrl = SSO_URLS.simulation.tournament;
 
     if (isAuthenticated && token) {
-      // User is authenticated - use SSO
       setIsSsoRedirecting(true);
-      await redirectWithSso(targetUrl, token);
-      // Note: setIsSsoRedirecting(false) not needed as page will redirect
+      try {
+        await redirectWithSso(targetUrl, token);
+      } finally {
+        setIsSsoRedirecting(false);
+      }
     } else {
-      // User not authenticated - direct redirect
-      window.location.href = targetUrl;
+      window.open(targetUrl, "_blank");
     }
   };
 

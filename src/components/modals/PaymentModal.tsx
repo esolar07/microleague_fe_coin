@@ -62,11 +62,13 @@ type PaymentStep =
   | "saft";
 
 const bankDetails = {
-  bankName: "First National Bank",
-  accountName: "MicroLeague Technologies Ltd",
-  accountNumber: "1234567890",
-  routingNumber: "021000021",
-  swiftCode: "FNBKUS33",
+  beneficiaryName: "MicroLeague Sports",
+  bankName: "Bank of America",
+  bankAddress: "4901 N. Federal Highway, Fort Lauderdale, FL 33308",
+  accountNumber: "898163320211",
+  abaRouting: "026009593",
+  swiftCode: "BOFAUS3N",
+  businessAddress: "2805 E Oakland Park Blvd, Unit 212, Fort Lauderdale, FL 33306",
   reference: "MLC-PRESALE-",
 };
 
@@ -1053,21 +1055,14 @@ const PaymentModal = ({
                       Transfer Details
                     </p>
                     {[
+                      { label: "Beneficiary", value: bankDetails.beneficiaryName },
                       { label: "Bank Name", value: bankDetails.bankName },
-                      { label: "Account Name", value: bankDetails.accountName },
-                      {
-                        label: "Account Number",
-                        value: bankDetails.accountNumber,
-                      },
-                      {
-                        label: "Routing Number",
-                        value: bankDetails.routingNumber,
-                      },
+                      { label: "Bank Address", value: bankDetails.bankAddress },
+                      { label: "Account Number", value: bankDetails.accountNumber },
+                      { label: "ABA Routing", value: bankDetails.abaRouting },
                       { label: "SWIFT Code", value: bankDetails.swiftCode },
-                      {
-                        label: "Reference",
-                        value: `${bankDetails.reference}${txRef}`,
-                      },
+                      { label: "Business Address", value: bankDetails.businessAddress },
+                      { label: "Reference", value: `${bankDetails.reference}${txRef}` },
                       { label: "Amount", value: `$${amount.toFixed(2)} USD` },
                     ].map((item) => (
                       <div
