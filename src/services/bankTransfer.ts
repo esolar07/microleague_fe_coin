@@ -60,6 +60,7 @@ export async function submitBankTransfer(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      transferId: `BT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
       walletAddress: data.walletAddress,
       amount: data.amount,
       senderName: data.senderName,
