@@ -1062,25 +1062,25 @@ const PaymentModal = ({
                       { label: "ABA Routing", value: bankDetails.abaRouting },
                       { label: "SWIFT Code", value: bankDetails.swiftCode },
                       { label: "Business Address", value: bankDetails.businessAddress },
-                      { label: "Reference", value: `${bankDetails.reference}${txRef}` },
-                      { label: "Amount", value: `$${amount.toFixed(2)} USD` },
+                      // { label: "Reference", value: `${bankDetails.reference}${txRef}` },
+                      // { label: "Amount", value: `$${amount.toFixed(2)} USD` },
                     ].map((item) => (
                       <div
                         key={item.label}
-                        className="flex items-center justify-between"
+                        className="flex items-start justify-between gap-3"
                       >
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground shrink-0 w-24 pt-0.5">
                           {item.label}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground font-mono">
+                        <div className="flex items-start gap-1.5 flex-1 justify-end">
+                          <span className="text-sm font-medium text-foreground font-mono text-right break-all">
                             {item.value}
                           </span>
                           <button
                             onClick={() =>
                               copyToClipboard(item.value, item.label)
                             }
-                            className="p-1 rounded hover:bg-secondary"
+                            className="p-1 rounded hover:bg-secondary shrink-0 mt-0.5"
                           >
                             {copied === item.label ? (
                               <CheckCircle className="w-3.5 h-3.5 text-success" />
