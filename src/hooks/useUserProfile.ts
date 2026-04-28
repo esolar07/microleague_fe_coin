@@ -11,6 +11,18 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import type { BackendAuthenticatedUser } from "@/lib/backend-auth";
 
+const withAvatarCacheBuster = (avatarUrl: string) => {
+  if (
+    avatarUrl.startsWith("data:") ||
+    avatarUrl.startsWith("blob:")
+  ) {
+    return avatarUrl;
+  }
+
+  const separator = avatarUrl.includes("?") ? "&" : "?";
+  return `${avatarUrl}${separator}t=${Date.now()}`;
+};
+
 // Query keys
 export const userProfileKeys = {
   all: ["userProfile"] as const,
@@ -84,17 +96,46 @@ export const useUploadAvatar = (walletAddress: string) => {
 
   return useMutation({
     mutationFn: (file: File) => uploadAvatar(walletAddress, file),
-    onSuccess: (data) => {
+    onMutate: async (file: File) => {
+      const previewUrl = URL.createObjectURL(file);
+      const queryKey = userProfileKeys.profile(walletAddress);
+
+      await queryClient.cancelQueries({ queryKey });
+
+      const previousProfile = queryClient.getQueryData<UserProfile>(queryKey);
+
       queryClient.setQueryData(
-        userProfileKeys.profile(walletAddress),
+        queryKey,
         (oldData: UserProfile | undefined) => {
           if (!oldData) return oldData;
-          return { ...oldData, avatar: data.avatarUrl };
+          return { ...oldData, avatar: previewUrl };
         },
       );
+
+      return { previousProfile, previewUrl, queryKey };
+    },
+    onSuccess: (data, _file, context) => {
+      const avatarUrl = withAvatarCacheBuster(data.avatarUrl);
+
+      queryClient.setQueryData(
+        context?.queryKey ?? userProfileKeys.profile(walletAddress),
+        (oldData: UserProfile | undefined) => {
+          if (!oldData) return oldData;
+          return { ...oldData, avatar: avatarUrl };
+        },
+      );
+      if (context?.previewUrl) {
+        URL.revokeObjectURL(context.previewUrl);
+      }
       toast.success("Avatar updated successfully!");
     },
-    onError: (error: any) => {
+    onError: (error: any, _file, context) => {
+      if (context?.queryKey) {
+        queryClient.setQueryData(context.queryKey, context.previousProfile);
+      }
+      if (context?.previewUrl) {
+        URL.revokeObjectURL(context.previewUrl);
+      }
       toast.error(error?.message || "Failed to upload avatar");
     },
   });

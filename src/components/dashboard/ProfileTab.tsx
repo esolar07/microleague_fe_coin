@@ -24,8 +24,11 @@ import {
 } from "@coinbase/cdp-hooks";
 import { ExportWallet } from "@coinbase/cdp-react/components/ExportWallet";
 import { useNavigate } from "react-router-dom";
-import { uploadAvatar } from "@/services/userProfile";
-import { useUserProfile, useUpdateUserProfile } from "@/hooks/useUserProfile";
+import {
+  useUploadAvatar,
+  useUserProfile,
+  useUpdateUserProfile,
+} from "@/hooks/useUserProfile";
 import { performCompleteLogout } from "@/utils/logout";
 import UserAvatar from "@/components/ui/UserAvatar";
 
@@ -65,6 +68,7 @@ const ProfileTab = () => {
     walletAddress || undefined,
   );
   const updateProfileMutation = useUpdateUserProfile(walletAddress);
+  const uploadAvatarMutation = useUploadAvatar(walletAddress);
 
   // Sync form when profile loads
   useEffect(() => {
@@ -109,10 +113,11 @@ const ProfileTab = () => {
     if (!file || !walletAddress) return;
     setUploadingAvatar(true);
     try {
-      await uploadAvatar(walletAddress, file);
+      await uploadAvatarMutation.mutateAsync(file);
     } catch {
       // ignore
     } finally {
+      e.target.value = "";
       setUploadingAvatar(false);
     }
   };
