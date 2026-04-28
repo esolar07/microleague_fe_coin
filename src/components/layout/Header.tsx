@@ -16,21 +16,31 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isSsoRedirecting, setIsSsoRedirecting] = useState(false);
   const { isAuthenticated, token, logout } = useAuth();
   const { disconnect } = useDisconnect();
   const { signOut } = useSignOut();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  const handleSsoRedirect = async (type: "simulate" | "tournament") => {
+    if (isAuthenticated && token) {
+      setIsSsoRedirecting(true);
+      await new Promise((r) => requestAnimationFrame(r));
+      try {
+        await smartRedirect(type, isAuthenticated, token);
+        await new Promise((r) => setTimeout(r, 800));
+      } finally {
+        setIsSsoRedirecting(false);
+      }
+    } else {
+      smartRedirect(type, isAuthenticated, token);
+    }
+  };
+
   const navLinks = [
-    {
-      label: "Simulate",
-      onClick: () => smartRedirect("simulate", isAuthenticated, token),
-    },
-    {
-      label: "Tournament",
-      onClick: () => smartRedirect("tournament", isAuthenticated, token),
-    },
+    { label: "Simulate", onClick: () => handleSsoRedirect("simulate") },
+    { label: "Tournament", onClick: () => handleSsoRedirect("tournament") },
     { label: "Clubhouse", href: "/clubhouse" },
     { label: "Coin", href: "/" },
   ];
@@ -238,6 +248,20 @@ const Header = () => {
         onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
       />
+
+      {isSsoRedirecting && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-2xl p-8 text-center shadow-xl">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Redirecting...
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Setting up your secure session
+            </p>
+          </div>
+        </div>
+      )}
     </>
   );
 };

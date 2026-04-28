@@ -181,8 +181,12 @@ const UserDashboard = () => {
 
     if (isAuthenticated && token) {
       setIsSsoRedirecting(true);
+      // Yield to let React flush the state update and paint the loader
+      await new Promise((r) => requestAnimationFrame(r));
       try {
         await redirectWithSso(targetUrl, token);
+        // Keep loader visible briefly after new tab opens so the user sees it
+        await new Promise((r) => setTimeout(r, 800));
       } finally {
         setIsSsoRedirecting(false);
       }
@@ -196,8 +200,12 @@ const UserDashboard = () => {
 
     if (isAuthenticated && token) {
       setIsSsoRedirecting(true);
+      // Yield to let React flush the state update and paint the loader
+      await new Promise((r) => requestAnimationFrame(r));
       try {
         await redirectWithSso(targetUrl, token);
+        // Keep loader visible briefly after new tab opens so the user sees it
+        await new Promise((r) => setTimeout(r, 800));
       } finally {
         setIsSsoRedirecting(false);
       }

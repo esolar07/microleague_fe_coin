@@ -928,6 +928,10 @@ function SuccessOrSetup({
     if (isLoading || profileData === undefined) return;
     if (isProfileIncomplete(profileData)) {
       onSetup();
+    } else {
+      // Profile is complete — auto-close after a short delay
+      const t = setTimeout(onSuccess, 1200);
+      return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileData, isLoading, isError]);
@@ -941,24 +945,16 @@ function SuccessOrSetup({
     );
   }
 
-  // Profile is complete — show "You're All Set!"
+  // Profile is complete — show brief confirmation before auto-closing
   return (
     <div className="py-8 text-center">
       <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
         <CheckCircle className="w-8 h-8 text-success" />
       </div>
       <h2 className="text-xl font-semibold text-foreground">You're All Set!</h2>
-      <p className="text-sm text-muted-foreground mt-2 mb-6">
+      <p className="text-sm text-muted-foreground mt-2">
         Welcome back to MicroLeague.
       </p>
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={onSuccess}
-        className="w-full mlc-btn-primary"
-      >
-        Continue
-      </motion.button>
     </div>
   );
 }
