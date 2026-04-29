@@ -30,7 +30,11 @@ export function useTokenSummary(walletAddress: string | undefined) {
     queryKey: tokenKeys.summary(walletAddress ?? ""),
     queryFn: () => getTokenSummary(walletAddress!),
     enabled: !!walletAddress,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 60_000,
   });
 }
 
@@ -43,7 +47,11 @@ export function useTokenTransactions(
     queryKey: tokenKeys.transactions(walletAddress ?? "", page, limit),
     queryFn: () => getTokenTransactions(walletAddress!, page, limit),
     enabled: !!walletAddress,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 30_000,
   });
 }
 
@@ -56,7 +64,11 @@ export function useClaimTransactions(
     queryKey: tokenKeys.claims(walletAddress ?? "", page, limit),
     queryFn: () => getClaimTransactions(walletAddress!, page, limit),
     enabled: !!walletAddress,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 30_000,
   });
 }
 
@@ -65,7 +77,11 @@ export function useVestingSchedules(walletAddress: string | undefined) {
     queryKey: tokenKeys.vestingSchedules(walletAddress ?? ""),
     queryFn: () => getVestingSchedules(walletAddress!),
     enabled: !!walletAddress,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 60_000,
   });
 }
 
@@ -74,6 +90,10 @@ export function useVestingSummary(walletAddress: string | undefined) {
     queryKey: tokenKeys.vestingSummary(walletAddress ?? ""),
     queryFn: () => getVestingSummary(walletAddress!),
     enabled: !!walletAddress,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 60_000,
   });
 }

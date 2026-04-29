@@ -49,6 +49,7 @@ import PaymentModal from "@/components/modals/PaymentModal";
 import WalletModal from "@/components/modals/WalletModal";
 import PresaleWidget from "@/components/presale/PresaleWidget";
 import { useBankTransfers } from "@/hooks/use-bank-transfers";
+import { tokenKeys } from "@/hooks/use-tokens";
 import type { BankTransferRecord } from "@/services/bankTransfer";
 import { APP_CHAIN } from "@/config/network";
 import { PRESALE_ADDRESS, USDC_ADDRESS } from "@/config/presale";
@@ -1629,6 +1630,13 @@ const UserDashboard = () => {
         mlcAmount={purchaseAmount / 0.001}
         onTransactionSuccess={async () => {
           await refetchBankTransfers();
+          await queryClient.invalidateQueries({
+            queryKey: tokenKeys.all,
+          });
+          await queryClient.refetchQueries({
+            queryKey: tokenKeys.all,
+            type: "active",
+          });
           // Clear all contract query cache to force fresh data fetch
           await queryClient.invalidateQueries({
             queryKey: ["readContract"],
@@ -1979,6 +1987,13 @@ const UserDashboard = () => {
         mlcAmount={purchaseAmount / 0.001}
         onTransactionSuccess={async () => {
           await refetchBankTransfers();
+          await queryClient.invalidateQueries({
+            queryKey: tokenKeys.all,
+          });
+          await queryClient.refetchQueries({
+            queryKey: tokenKeys.all,
+            type: "active",
+          });
           // Clear all contract query cache to force fresh data fetch
           await queryClient.invalidateQueries({
             queryKey: ["readContract"],

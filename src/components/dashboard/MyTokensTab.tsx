@@ -1,11 +1,11 @@
 // Feature: dashboard-tokens-vesting
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Wallet, AlertTriangle, ExternalLink, ChevronLeft, ChevronRight, RefreshCw, Coins, Lock, TrendingUp, Zap } from "lucide-react";
 import { formatUnits } from "viem";
 import { APP_CHAIN } from "@/config/network";
 import { requestSwitchChain } from "@/web3/requestSwitchChain";
-import { getTokenTransactions, TransactionPage } from "@/services/tokens";
+import { useTokenTransactions } from "@/hooks/use-tokens";
 
 interface MyTokensTabProps {
   address: string | undefined;
@@ -26,29 +26,19 @@ export default function MyTokensTab({
   userTotalClaimed,
   userClaimableAmount,
 }: MyTokensTabProps) {
-
   const [page, setPage] = useState(1);
-  const [txData, setTxData] = useState<TransactionPage | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!address) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    getTokenTransactions(address, page, 10)
-      .then((result) => {
-        if (!cancelled) setTxData(result);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load transactions");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [address, page]);
+  const {
+    data: txData,
+    isLoading: loading,
+    isError,
+    error: transactionsError,
+    refetch: refetchTransactions,
+  } = useTokenTransactions(address, page, 10);
+  const error = isError
+    ? transactionsError instanceof Error
+      ? transactionsError.message
+      : "Failed to load transactions"
+    : null;
 
   const decimals = saleTokenDecimals ?? 18;
   const isLoading = userTotalAllocated === undefined;
@@ -167,7 +157,9 @@ export default function MyTokensTab({
             <p className="text-sm text-red-400">{error}</p>
             <button
               className="mlc-btn-secondary text-sm px-3 py-1.5 flex items-center gap-1"
-              onClick={() => { setError(null); setPage((p) => p); }}
+              onClick={() => {
+                void refetchTransactions();
+              }}
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Retry
