@@ -404,7 +404,6 @@ const UserDashboard = () => {
     totalClaimedMLC: isWalletReady ? totalClaimedMLC : 0,
     vestedSoFarMLC: isWalletReady ? totalVestedSoFarMLC : 0,
     totalPoints: 1250, // This could come from a points contract
-    referrals: 12, // This could come from a referral contract
     pendingRewards: 250, // This could come from a rewards contract
     usdcBalance: usdcBalance
       ? Number(usdcBalance.value) / Math.pow(10, usdcBalance.decimals)
@@ -852,9 +851,11 @@ const UserDashboard = () => {
                   <Users className="w-4 h-4 text-primary" />
                 </div>
                 <p className="text-2xl font-bold text-foreground">
-                  {stats.referrals}
+                  Coming Soon
                 </p>
-                <p className="text-xs text-primary mt-1">Active</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Referrals are not live yet
+                </p>
               </div>
             </div>
 
